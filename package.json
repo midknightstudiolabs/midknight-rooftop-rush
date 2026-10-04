@@ -1,0 +1,14 @@
+{
+  "name": "midknight-rooftop-rush",
+  "version": "0.7.0",
+  "private": true,
+  "type": "module",
+  "description": "Midknight rooftop runner public playtest",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node tests/gameplay.mjs && node tests/motion.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
