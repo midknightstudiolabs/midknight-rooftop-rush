@@ -74,7 +74,7 @@ export function createMidknight({camera,loader=new THREE.TextureLoader()}={}){
    // Per-frame UV offsets keep the body centered and the grounded paw line stable.
    root.position.set(p.x,p.y+.10,0);if(camera)billboard.quaternion.copy(camera.quaternion);else billboard.quaternion.identity();
    lean=THREE.MathUtils.damp(lean,THREE.MathUtils.clamp(-p.vx*.003,-.025,.025),9,dt);billboard.rotateZ(lean);
-   material.uniforms.glow.value=p.phase>0?1:protectedState?.35:0;
+   material.uniforms.glow.value=THREE.MathUtils.damp(material.uniforms.glow.value,p.phase>0?.35:protectedState?.15:0,4,dt);
  }
  function dispose(){disposed=true;material.uniforms.runAtlas.value?.dispose();plane.geometry.dispose();material.dispose();}
  return {root,animate,loaded,reset,dispose,get ready(){return ready;},get failed(){return failed;}};

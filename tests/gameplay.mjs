@@ -43,6 +43,13 @@ assert.ok(u.poseWeights.value.z>0&&u.poseWeights.value.z<.2,'landing blends in w
 assert.ok(u.poseWeights.value.x+u.poseWeights.value.y+u.poseWeights.value.z<=1.00001,'pose blending stays normalized');
 anim.reset();avatar.reset();for(let i=0;i<120;i++){anim.vx=i<60?18:-18;avatar.animate(1/120,anim,31,i/120);const q=mesh.parent.quaternion.clone();q.premultiply(camera.quaternion.clone().invert());assert.ok(Math.abs(new Three.Euler().setFromQuaternion(q).z)<.0251,'turning lean remains small');}
 avatar.dispose();
+// Regression: roof shell and bridge surfaces must not compete at one depth.
+assert.ok(run('roofSections.every(g=>{const shell=g.children[0],deck=g.children[1];return shell.position.y+shell.scale.y/2 < deck.position.y+deck.scale.y/2-.1;})'));
+assert.ok(run('roofSections.every(g=>g.children.filter(o=>o.material===mats.rail).every(o=>o.position.y+o.scale.y/2>.01))'));
+reset();for(let i=0;i<120;i++){run('frame(last+1000/60)');assert.equal(run('cat.visible'),true,'invulnerability never blinks the cat');}
+reset();run("gates=2;collectGate({mesh:{position:new THREE.Vector3()}})");const initialLight=run('scene.background.r');
+assert.ok(Math.abs(initialLight-run('districtTint.r'))>.001,'district effect starts from the previous lighting');
+run('update(STEP)');assert.ok(Math.abs(run('scene.background.r')-initialLight)<.002,'district light fades gradually');
 console.log('PASS: physics, jump height/buffering/coyote time, pounce limits, rooftop landings, spring lanes, swept collisions, shields/rush, ramp speeds, combos/gates/healing, pause/restart, structured controls, texture readiness/failure, eight-frame stride, loop duration, air/crouch/landing blends and paw alignment.');
 
 
