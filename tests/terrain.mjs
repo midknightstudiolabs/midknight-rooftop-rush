@@ -11,7 +11,7 @@ for(let i=0;i<100;i++){roof.schedule(i*235+140,i%2?1:-1);roof.prune(i*235);}asse
 console.log('PASS: split roofs, continuous alternate routes, true gaps, jumping, no underside teleport, manual fuel and depletion.');
 
 // A bend must carry the cat and its support together, with no sudden turn.
-for(const side of [-1,1])for(const speed of [12,16,20]){
+for(const side of [-1,1])for(const speed of [12,16,20,28]){
  const layout=new RoofLayout(),first=layout.schedule(144,side),start=(first-1)*12;
  assert.equal(layout.offsetAt(start),0);assert.equal(layout.offsetAt(start+84),0);
  assert.ok(Math.abs(layout.offsetAt(start+42)-side*1.1)<1e-9);
@@ -23,7 +23,7 @@ for(const side of [-1,1])for(const speed of [12,16,20]){
   assert.ok(Math.abs(p.x-(2.8+offset))<.2,'cat stays centered on a curved lane');
   for(const lane of layout.lanes(layout.indexAt(d)))assert.ok(layout.supported(d,lane*2.8+offset));
  }
- assert.ok(maxVelocity<1.2,'bends do not whip the player sideways');
+ assert.ok(maxVelocity<1.5,'bends do not whip the player sideways');
 }
 assert.ok(roof.bends.length<4,'old bend plans expire');
-console.log('PASS: left/right bends, smooth entry/exit, support alignment and bounded lateral speed at 12–20 m/s.');
+console.log('PASS: left/right bends, smooth entry/exit, support alignment and bounded lateral speed at 12–28 m/s.');

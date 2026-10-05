@@ -1,6 +1,6 @@
 import * as THREE from './three.module.js';
-import {EncounterDirector,bendAt,pounceVelocity,smokeStage} from './rooftops.js?v=speedster13';
-import {createMidknight} from './character-sprite.js?v=speedster13';
+import {EncounterDirector,bendAt,pounceVelocity,smokeStage} from './rooftops.js?v=speedster14';
+import {createMidknight} from './character-sprite.js?v=speedster14';
 
 // Keep the skyline stationary: no vertex warping or moving horizon.
 export function curveMaterial(material){return material;}

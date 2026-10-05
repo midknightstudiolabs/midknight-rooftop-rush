@@ -59,7 +59,7 @@ run('update(STEP)');assert.ok(Math.abs(run('scene.background.r')-initialLight)<.
 console.log('PASS: physics, jump height/buffering/coyote time, pounce limits, rooftop landings, spring lanes, swept collisions, shields/rush, ramp speeds, combos/gates/healing, pause/restart, structured controls, texture readiness/failure, eight-frame stride, loop duration, air/crouch/landing blends and paw alignment.');
 
 // Course generation, roof visibility and player collisions share one terrain map.
-reset();run("for(let i=0;i<50000;i++){const city=adventure.snapshot(),now=terrain.lanes(terrain.indexAt(distance)),ahead=terrain.lanes(terrain.indexAt(distance+8)),safe=now.filter(l=>ahead.includes(l));const preferred=['chimney','shutters'].includes(city.encounter)?-city.hazardLane:0;physics.lane=safe.includes(preferred)?preferred:safe[0];update(STEP);}");
+reset();run("for(let i=0;i<50000;i++){if(i%600===0)nitro.press();if(i%600===360)nitro.release();const city=adventure.snapshot(),now=terrain.lanes(terrain.indexAt(distance)),ahead=terrain.lanes(terrain.indexAt(distance+8)),safe=now.filter(l=>ahead.includes(l));const preferred=['chimney','shutters'].includes(city.encounter)?-city.hazardLane:0;physics.lane=safe.includes(preferred)?preferred:safe[0];update(STEP);}");
 assert.equal(run('mode'),'running',JSON.stringify(run('({distance,y:physics.y,lane:physics.lane,city:adventure.snapshot()})')));assert.ok(run('adventure.snapshot().encounters')>16);assert.ok(run('objects.length')<100);
 reset();run("adventure.buildEncounter('fork');moonPounce();");assert.equal(run('mode'),'running');assert.equal(run('physics.moon'),2);assert.equal(run('motionScale'),1);
 inputHandlers.get('keydown')({code:'KeyN',repeat:false,preventDefault(){}});assert.equal(run('nitro.held'),true);inputHandlers.get('keyup')({code:'KeyN'});assert.equal(run('nitro.held'),false);
@@ -89,7 +89,7 @@ for(const x of [-5.7,5.7])assert.ok(Math.abs(run(`new THREE.Vector3(${x},1.5,0).
 ctx.innerWidth=1440;ctx.innerHeight=900;inputHandlers.get('resize')();run('camera.updateMatrixWorld(true);');
 assert.ok(run('new THREE.Vector3(0,10.5,0).project(camera).y')<1,'high pounce fits without moving the camera');
 
-reset();run('nitro.press();for(let i=0;i<100;i++)update(STEP);');assert.ok(run('speed')>14&&run('speed')<16,'boost accelerates smoothly');const boostSpeed=run('speed');run('nitro.release();for(let i=0;i<100;i++)update(STEP);');assert.ok(run('speed')<boostSpeed,'release eases back to normal speed');
+reset();run('nitro.press();for(let i=0;i<100;i++)update(STEP);');assert.ok(run('speed')>19&&run('speed')<22,'boost accelerates smoothly');const boostSpeed=run('speed');run('nitro.release();for(let i=0;i<100;i++)update(STEP);');assert.ok(run('speed')<boostSpeed,'release eases back to normal speed');
 const boostButton=element('nitroBtn');boostButton.handlers.get('pointerdown')({preventDefault(){},pointerId:4});assert.equal(run('nitro.held'),true);boostButton.handlers.get('pointercancel')();assert.equal(run('nitro.held'),false);boostButton.handlers.get('pointerdown')({preventDefault(){},pointerId:5});inputHandlers.get('blur')();assert.equal(run('mode'),'paused');assert.equal(run('nitro.held'),false);
 assert.ok(!fs.readFileSync(new URL('../index.html',import.meta.url),'utf8').includes('id="aimPanel"'),'landing dialog is removed from the page');
 console.log('PASS: Nitro acceleration/release, touch cancellation, focus-loss pause and no landing dialog.');
@@ -108,11 +108,11 @@ console.log('PASS: steering buttons, curved roof geometry, pickup alignment and 
 
 reset();run('for(let i=0;i<120;i++)update(STEP);');const normalTravel=run('distance'),normalTime=run('time');
 reset();const boostStart=run('time');run('nitro.press();for(let i=0;i<120;i++)update(STEP);');
-assert.ok(run('distance')<normalTravel*.7,'boost gives more real reaction time');assert.ok(run('time')-boostStart<.55,'hazards and effects run on slowed world time');
-assert.ok(run('speedster.strideScale')>1.54);assert.ok(Math.abs(run('nitro.fuel')-32)<1e-8);
+assert.ok(run('distance')>normalTravel*1.4,'Nitro actually covers more ground, never slows the cat');assert.ok(run('time')-boostStart<.4,'hazards and effects run on slowed world time');
+assert.ok(run('speedster.strideScale')>2.29);assert.ok(Math.abs(run('nitro.fuel')-32)<1e-8);
 const boostCamera=run('camera.position.toArray().concat(camera.quaternion.toArray(),camera.fov)').join(',');run('frame(last+16);');assert.ok(run('speedTrail.visible'));
 assert.equal(run('camera.position.toArray().concat(camera.quaternion.toArray(),camera.fov)').join(','),boostCamera);
 run('physics.pounce();update(STEP);');assert.ok(run('nitro.active'),'boost continues through a jump');
 run('pause();');assert.equal(run('speedster.amount'),0);assert.equal(run('speedTrail.visible'),false);run('home();start();');assert.equal(run('speedster.worldScale'),1);
 reset();run("nitro.press();createObject('barrier',0,-.1);update(STEP);");assert.equal(run('mode'),'splat');assert.equal(run('speedster.amount'),0);assert.equal(run('speedTrail.visible'),false);
-console.log('PASS: slowed world clock and travel, faster stride, airborne boost, fixed camera and effect cleanup.');
+console.log('PASS: slowed environment with faster forward travel, faster stride, airborne boost, fixed camera and effect cleanup.');

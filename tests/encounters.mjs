@@ -14,9 +14,9 @@ function harness(autospawn=false){
  const box=(m,p,s,parent)=>mesh(new THREE.BoxGeometry(),m,p,s,parent),ball=(m,p,s,parent)=>mesh(new THREE.SphereGeometry(1,8,6),m,p,s,parent);
  const a=createAdventure({scene,camera,physics,route,mat,mats,mesh,box,ball,autospawn,avatarFactory:()=>({loaded:Promise.resolve(),root:new THREE.Group(),ready:true,animate(){}}),getState:()=>state,toast:s=>messages.push(s),hit:()=>{hits++},addStyle:(label,points)=>{rewards.push(label);state.styleScore+=points},createObject:(type,l,z,height=0)=>{const o={type,l,z,height,done:false};objects.push(o);return o;}});
  function tick(seconds){for(let i=0;i<Math.round(seconds/STEP);i++){
-  const dt=STEP*(state.timeScale??1),travel=state.speed*dt;state.distance+=travel;state.time+=dt;a.advance(dt,travel);
+  const dt=STEP*(state.timeScale??1),travel=state.speed*STEP;state.distance+=travel;state.time+=dt;a.advance(dt,travel);
   for(const o of objects){o.z+=travel;if(o.type==='ramp'&&!o.done&&Math.abs(o.z)<1.65&&Math.abs(physics.x-o.l*2.8)<1.05&&physics.y<.7){physics.launch(o.routeRamp?rampVelocity(state.speed,physics.y,o.routeTop??2.76):14.5);o.done=true;}}
-  physics.step(dt,a.surfaces(),true,0,STEP);a.collide(dt);a.render(dt);
+  physics.step(STEP,a.surfaces(),true,0,STEP);a.collide(dt);a.render(dt);
  }}
  return {a,state,physics,scene,rewards,messages,objects,tick,get hits(){return hits}};
 }
@@ -44,8 +44,8 @@ for(const win of [false,true]){const h=harness();h.a.buildEncounter('rival');h.t
 console.log('PASS: all eight encounters, safe routes, reactive smoke/shutters/pigeons, continuous forks, high routes at 12–40 m/s, race win/loss and bounded cleanup.');
 
 // Release/reapply time dilation while crossing each elevated route. Vertical
-// physics and world travel must stay synchronized through both transitions.
-for(const kind of ['fork','collapse','laundry','corner'])for(const speed of [12,20]){
+// physics and travel stay in real time through both transitions.
+for(const kind of ['fork','collapse','laundry','corner'])for(const speed of [12,21,28]){
  const h=harness(),fx=new Speedster();h.state.speed=speed;h.physics.x=-2.8;h.physics.lane=-1;h.a.buildEncounter(kind);
  for(let i=0;i<2400;i++){fx.step(STEP,h.state.distance>40&&h.state.distance<70||h.state.distance>83&&h.state.distance<90);h.state.timeScale=fx.worldScale;h.tick(STEP);}
  assert.equal(h.hits,0,kind+' remains safe when toggling slow motion at '+speed);assert.ok(h.rewards.length>0);

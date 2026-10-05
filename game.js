@@ -1,10 +1,10 @@
 import * as THREE from './three.module.js';
-import {createMidknight} from './character-sprite.js?v=speedster13';
-import {CatPhysics,STEP,sweptOverlap} from './physics.js?v=speedster13';
-import {curveMaterial,createAdventure} from './adventure.js?v=speedster13';
-import {bendAt,rampVelocity,pounceVelocity} from './rooftops.js?v=speedster13';
-import {RoofLayout,Nitro} from './terrain.js?v=speedster13';
-import {Speedster,createSpeedTrail} from './speedster.js?v=speedster13';
+import {createMidknight} from './character-sprite.js?v=speedster14';
+import {CatPhysics,STEP,sweptOverlap} from './physics.js?v=speedster14';
+import {curveMaterial,createAdventure} from './adventure.js?v=speedster14';
+import {bendAt,rampVelocity,pounceVelocity} from './rooftops.js?v=speedster14';
+import {RoofLayout,Nitro} from './terrain.js?v=speedster14';
+import {Speedster,createSpeedTrail} from './speedster.js?v=speedster14';
 const route={value:0},terrain=new RoofLayout(),nitro=new Nitro(),speedster=new Speedster();
 
 const $=id=>document.getElementById(id);
@@ -124,22 +124,22 @@ function updateHud(){$('score').textContent=Math.floor(distance);$('coins').text
 function update(dt){
  if(mode==='splat'){splatTime+=dt;const fall=Math.min(1,splatTime/.55);physics.y=splatFromY+(splatFloor-splatFromY)*(fall*fall*(3-2*fall));avatar.animateSplat(splatTime,physics);shadow.position.set(physics.x,splatFloor+.035,0);shadow.scale.set(1.65,1.6,1);if(splatTime>=1.15)finish();return;}
  if(mode!=='running'&&mode!=='menu')return;
- const realDt=dt;if(mode==='running'){nitro.step(realDt);speedster.step(realDt,nitro.active);}dt*=speedster.worldScale;
- time+=dt;const lightBlend=1-Math.exp(-dt*.7);scene.fog.color.lerp(districtTint,lightBlend);scene.background.copy(scene.fog.color);buildingMats.forEach(m=>m.emissiveIntensity=THREE.MathUtils.damp(m.emissiveIntensity,districtGlow,.7,dt));toastTimer-=dt;if(toastTimer<=0)$('toast').classList.remove('show');
- if(mode==='running'){const targetSpeed=12+Math.min(distance/900,4)+(nitro.active?4:0);if(physics.grounded)speed=THREE.MathUtils.damp(speed,targetSpeed,1.8,realDt);}const step=(mode==='running'?speed:0)*dt;
+ const realDt=dt;if(mode==='running'){nitro.step(realDt);speedster.step(realDt,nitro.active);}const worldDt=dt*speedster.worldScale;
+ time+=worldDt;const lightBlend=1-Math.exp(-worldDt*.7);scene.fog.color.lerp(districtTint,lightBlend);scene.background.copy(scene.fog.color);buildingMats.forEach(m=>m.emissiveIntensity=THREE.MathUtils.damp(m.emissiveIntensity,districtGlow,.7,dt));toastTimer-=dt;if(toastTimer<=0)$('toast').classList.remove('show');
+ if(mode==='running'){const targetSpeed=(12+Math.min(distance/900,4))*speedster.travelScale;if(physics.grounded)speed=THREE.MathUtils.damp(speed,targetSpeed,5,realDt);}const step=(mode==='running'?speed:0)*dt;
  for(const o of roofSections){o.position.z+=step;if(o.position.z>18){o.position.z-=276;o.userData.index+=23;}}syncRoofs();terrain.prune(distance);
  for(const a of [arches])for(const o of a){o.position.z+=step;if(o.position.z>22)o.position.z-=a===scenery?246.4:a===lamps?234:240;}
  if(mode==='menu')return;
  distance+=step;invincible=Math.max(0,invincible-dt);rush=Math.max(0,rush-dt);shield=Math.max(0,shield-dt);magnet=Math.max(0,magnet-dt);shake=Math.max(0,shake-dt);comboTimer=Math.max(0,comboTimer-dt);if(comboTimer===0)combo=0;
  for(const o of objects){o.previousZ=o.mesh.position.z;o.mesh.position.z+=step;}
- adventure.advance(dt,step);
+ adventure.advance(worldDt,step);
  const surfaces=objects.filter(o=>o.type==='penthouse'||o.type==='roof').map(o=>({x:o.mesh.position.x,z:o.mesh.position.z,halfWidth:1.2,halfLength:o.len/2,top:2.76})).concat(adventure.surfaces());
- physics.step(dt,surfaces,terrain.supported(distance,physics.x),terrain.offsetAt(distance),realDt);if(physics.y < -3){lives=0;nitro.release();finish();$('endEyebrow').textContent='MIND THE GAP';$('endMessage').textContent='Choose a lit roof, or jump across the gap. Your next run starts here.';return;}adventure.collide(dt);if(mode!=='running')return;
+ physics.step(dt,surfaces,terrain.supported(distance,physics.x),terrain.offsetAt(distance),realDt*speedster.steeringScale);if(physics.y < -3){lives=0;nitro.release();finish();$('endEyebrow').textContent='MIND THE GAP';$('endMessage').textContent='Choose a lit roof, or jump across the gap. Your next run starts here.';return;}adventure.collide(worldDt);if(mode!=='running')return;
  if(physics.landed&&physics.impact>7){burst(new THREE.Vector3(physics.x,physics.y+.12,0),mats.white,5);tone(95,.06,.023,'triangle');}
  spawnClock-=dt;if(spawnClock<=0&&adventure.canSpawn()){for(let k=0;k<6;k++){const z=-38-k*2.2,lanes=terrain.lanes(terrain.indexAt(distance-z));createObject('coin',lanes.includes(0)?0:lanes[0],z);}spawnClock=2.8;}beat+=dt;if(beat>.26){beat=0;tone(notes[Math.floor(time/.26)%8],.13,.012,'triangle');}
  for(let i=objects.length-1;i>=0;i--){const o=objects[i],dz=o.mesh.position.z,dx=Math.abs(o.mesh.position.x-physics.x),overlap=sweptOverlap(o.previousZ,dz,o.len/2);
    if(['coin','shield','magnet','gate'].includes(o.type)){
-     if(o.type!=='gate')o.mesh.rotation.y+=dt*3;else o.mesh.rotation.z=Math.sin(time*1.4)*.08;
+     if(o.type!=='gate')o.mesh.rotation.y+=worldDt*3;else o.mesh.rotation.z=Math.sin(time*1.4)*.08;
      if(magnet>0&&o.type==='coin'&&dz>-12&&dz<2){o.mesh.position.x=THREE.MathUtils.damp(o.mesh.position.x,physics.x,9,dt);o.mesh.position.y=THREE.MathUtils.damp(o.mesh.position.y,physics.y,9,dt);}
      const targetY=o.mesh.position.y+(o.type==='gate'?1:1.1),centerY=physics.y+physics.height*.55;
      if(!o.done&&overlap&&Math.abs(o.mesh.position.x-physics.x)<(o.type==='gate'?1.05:1.1)&&Math.abs(targetY-centerY)<(o.type==='gate'?.85:1.15)){o.done=true;if(o.type==='coin')collect(o);else if(o.type==='gate')collectGate(o);else{if(o.type==='shield')shield=12;else magnet=10;toast(o.type==='shield'?'SHIELD UP!':'GOLD MAGNET!');tone(880,.3,.04);}scene.remove(o.mesh);objects.splice(i,1);continue;}
@@ -154,7 +154,7 @@ function update(dt){
    if(dz>25){scene.remove(o.mesh);objects.splice(i,1);}
  }
  
- for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.life-=dt;p.v.y-=8*dt;p.mesh.position.addScaledVector(p.v,dt);p.mesh.position.z+=step*.2;p.mesh.scale.setScalar(Math.max(.01,p.life/p.max));if(p.life<=0){scene.remove(p.mesh);particles.splice(i,1);}}
+ for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.life-=worldDt;p.v.y-=8*worldDt;p.mesh.position.addScaledVector(p.v,worldDt);p.mesh.position.z+=step*.2;p.mesh.scale.setScalar(Math.max(.01,p.life/p.max));if(p.life<=0){scene.remove(p.mesh);particles.splice(i,1);}}
 }
 let last=performance.now(),accumulator=0,hudClock=0;function frame(now){const elapsed=Math.min((now-last)/1000,.1);last=now;motionScale=1;accumulator+=elapsed;while(accumulator>=STEP){update(STEP);accumulator-=STEP;}if(mode==='running'){
  cat.visible=true;shadow.visible=terrain.supported(distance,physics.x);shadow.position.set(physics.x,physics.y>2.75?2.8:.035,0);shadow.scale.set(1-physics.y*.055,1.6-physics.y*.09,1);shadow.material.opacity=Math.max(.1,.38-physics.y*.045);
