@@ -1,3 +1,4 @@
+import {curveMaterial,createAdventure} from '../adventure.js';import {bendAt,rampVelocity} from '../rooftops.js';
 import fs from 'node:fs';import assert from 'node:assert/strict';import vm from 'node:vm';import * as Three from '../three.module.js';import {CatPhysics,PHYSICS,STEP,sweptOverlap} from '../physics.js';import {createMidknight as createSprite} from '../character-sprite.js';
 const createMidknight=(options={})=>createSprite({...options,loader:{loadAsync:async()=>new Three.Texture()}});
 const simulate=(p,seconds,surfaces=[])=>{for(let i=0;i<Math.round(seconds/STEP);i++)p.step(STEP,surfaces);};
@@ -10,7 +11,9 @@ const roof=new CatPhysics();roof.y=4;roof.vy=-3;roof.grounded=false;const platfo
 const regen=new CatPhysics();regen.moon=0;simulate(regen,27.1);assert.equal(regen.moon,3);
 const spring=new CatPhysics();spring.move(1);spring.step(STEP);assert.ok(spring.x>0&&spring.x<.1);simulate(spring,1);assert.ok(Math.abs(spring.x-2.8)<.01);spring.move(1);assert.equal(spring.lane,1);assert.ok(sweptOverlap(-20,20,.4));assert.equal(sweptOverlap(-20,-10,.4),false);
 const elements=new Map(),registered=new Map();const element=id=>{if(!elements.has(id))elements.set(id,{style:{},classList:{add(){},remove(){},toggle(){}},addEventListener(){},setAttribute(){},hidden:false,textContent:'',showModal(){this.open=true},close(){this.open=false},setPointerCapture(){}});return elements.get(id);};
-const ctx={THREE:{...Three,WebGLRenderer:class{setPixelRatio(){}setSize(){}render(){}}},CatPhysics,STEP,sweptOverlap,createMidknight,document:{getElementById:element,body:element('body'),addEventListener(){},modelContext:{registerTool(t){registered.set(t.name,t)}}},localStorage:{getItem(){return '0'},setItem(){}},window:{},innerWidth:1440,innerHeight:900,devicePixelRatio:1,requestAnimationFrame(){},addEventListener(){},performance,console,Math,AbortController,Error};
+globalThis.document={getElementById:element};
+const inputHandlers=new Map();
+const ctx={curveMaterial,createAdventure:(api)=>createAdventure({...api,avatarFactory:createMidknight}),bendAt,rampVelocity,THREE:{...Three,WebGLRenderer:class{setPixelRatio(){}setSize(){}render(){}}},CatPhysics,STEP,sweptOverlap,createMidknight,document:{getElementById:element,body:element('body'),addEventListener(){},modelContext:{registerTool(t){registered.set(t.name,t)}}},localStorage:{getItem(){return '0'},setItem(){}},window:{},innerWidth:1440,innerHeight:900,devicePixelRatio:1,requestAnimationFrame(){},addEventListener(name,fn){inputHandlers.set(name,fn)},performance,console,Math,AbortController,Error};
 const source=fs.readFileSync(new URL('../game.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'');vm.createContext(ctx);vm.runInContext(source,ctx);const run=code=>vm.runInContext(code,ctx);const reset=()=>run('sound=false;start();spawnClock=999;invincible=0;');
 await run('avatar.loaded');
 reset();run("createObject('barrier',0,-.1);update(STEP);");assert.equal(run('lives'),2);run('update(STEP)');assert.equal(run('lives'),2);
@@ -51,6 +54,20 @@ reset();run("gates=2;collectGate({mesh:{position:new THREE.Vector3()}})");const 
 assert.ok(Math.abs(initialLight-run('districtTint.r'))>.001,'district effect starts from the previous lighting');
 run('update(STEP)');assert.ok(Math.abs(run('scene.background.r')-initialLight)<.002,'district light fades gradually');
 console.log('PASS: physics, jump height/buffering/coyote time, pounce limits, rooftop landings, spring lanes, swept collisions, shields/rush, ramp speeds, combos/gates/healing, pause/restart, structured controls, texture readiness/failure, eight-frame stride, loop duration, air/crouch/landing blends and paw alignment.');
+
+// Exercise the actual game loop across multiple full encounter decks.
+reset();run('for(let i=0;i<20000;i++){invincible=100;update(STEP);}');
+assert.equal(run('mode'),'running');assert.ok(run('adventure.snapshot().encounters')>16);
+assert.ok(run('objects.length')<100,'encounter collectibles are recycled');
+assert.ok(run('adventure.snapshot().platforms')<8);
+reset();run("adventure.buildEncounter('fork');for(let i=0;i<900&&!adventure.readyToAim;i++){invincible=100;update(STEP);}moonPounce();");
+assert.ok(run('adventure.aiming'));const aimDistance=run('distance');
+run('pause();for(let i=0;i<12;i++)frame(last+1000/60);');assert.equal(run('distance'),aimDistance);
+run('pause();');inputHandlers.get('keydown')({code:'ArrowRight',repeat:false,preventDefault(){}});
+assert.equal(run('adventure.snapshot().selectedLane'),1);inputHandlers.get('keyup')({code:'ShiftLeft'});
+assert.equal(run('adventure.aiming'),false);assert.equal(run('physics.moon'),2);
+run('home();start();');assert.equal(run('adventure.snapshot().encounters'),0);assert.equal(run('adventure.snapshot().aiming'),false);
+console.log('PASS: extended live-loop integration, aim keyboard selection/release, pause during aiming and clean restart.');
 
 
 

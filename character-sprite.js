@@ -2,7 +2,7 @@ import * as THREE from './three.module.js';
 
 // Baked character animation. No independently moving primitive limbs or fur cones.
 // All frames share the same straight rear camera angle as the running lane.
-export function createMidknight({camera,loader=new THREE.TextureLoader()}={}){
+export function createMidknight({camera,loader=new THREE.TextureLoader(),tint=0xffffff}={}){
  const root=new THREE.Group(),billboard=new THREE.Group();root.add(billboard);
  const centers=[.5371,.5272,.5256,.5,.5462,.5335,.5224,.5143,.5398,.5447,.524,.508,.543,.5399,.5192,.5016].map(v=>.1+.8*v);
  const baselines=[.978,.978,.978,.978,.949,.949,.949,.949,.914,.914,.914,.914,.7325,.8567,.8854,.8885].map(v=>.1+.8*v);
@@ -29,9 +29,11 @@ export function createMidknight({camera,loader=new THREE.TextureLoader()}={}){
      +premul(sampleFrame(14.))*poseWeights.z;
    if(c.a<.018)discard;
    vec3 rgb=c.rgb/max(c.a,.001);rgb=mix(rgb,vec3(.77,.64,1.),glow*.17);
-   gl_FragColor=vec4(pow(max(rgb,vec3(0.)),vec3(2.2)),c.a);
+   gl_FragColor=vec4(pow(max(rgb*tintColor,vec3(0.)),vec3(2.2)),c.a);
    #include <colorspace_fragment>
  }`});
+ material.fragmentShader='uniform vec3 tintColor;\n'+material.fragmentShader;
+ material.uniforms.tintColor={value:new THREE.Color(tint)};
  material.uniforms.poseWeights={value:poseWeights};
  material.uniforms.tailDynamics={value:tailDynamics};material.uniforms.earDynamics={value:earDynamics};
  material.uniforms.bodyDynamics={value:bodyDynamics};
