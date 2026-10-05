@@ -1,6 +1,6 @@
 # Midknight Rooftop Rush
 
-A browser playtest starring Midknight, a fluffy black tuxedo cat, exploring a reactive moonlit rooftop district. Version 0.9 introduces the Living City encounters.
+A browser playtest starring Midknight, a fluffy black tuxedo cat, exploring a reactive moonlit rooftop district. Version 0.10 keeps the Living City encounters, removes world bending and adds the liquid-cat impact gag.
 
 **[Play in your browser](https://midknightstudiolabs.github.io/midknight-rooftop-rush/)**
 
@@ -17,7 +17,7 @@ No installation, account or API key is needed to play. Desktop keyboard and mobi
 | Aim at a rooftop fork | Hold Shift / E or jump; choose with left/right, release to leap | Hold Pounce, then tap a landing card |
 | Pause | P or Escape | Pause button |
 
-Collect gold, follow ramps onto raised roof sections, chain clean tricks and catch three Moon Gates to awaken a district. Moon Pounce spends a recharging moonlight charge and briefly lets you pass through obstacles.
+Collect gold, follow ramps onto raised roof sections, chain clean tricks and catch three Moon Gates to awaken a district. Moon Pounce spends a recharging moonlight charge and briefly protects against smoke. Solid objects always stop the run.
 
 ## Run locally
 
@@ -31,8 +31,10 @@ Open http://127.0.0.1:4173. There are no dependencies to install. For the automa
 
 ## What this build includes
 
-- A continuous curved skyline, banking streets and raised corner shortcuts, with shared rendering and collision coordinates at the player.
-- Eight encounter types: chimney smoke, three-way pounce forks, opening shutters, pigeon-triggered falling pots, crumbling roof tiles, laundry lines, rival races and corner shortcuts.
+- A stationary skyline and camera, with no world bending, camera bob, jump tracking or Rush zoom. The viewport is fitted once on resize to keep all lanes visible on phones.
+- Hard collisions stop the world immediately, squash Midknight into a flat liquid-cat pose, then show the restart screen. Rush, shields and pounces cannot pass through solid obstacles.
+- Rush doubles coin score instead of accelerating the camera view. Running speed rises gradually from 16 to 22 m/s; aiming eases into and out of slow motion.
+- Eight encounter types: chimney smoke, three-way pounce forks, opening shutters, pigeon-triggered falling pots, crumbling roof tiles, laundry lines, rival races and raised shortcuts.
 - Cat Instinct: a three-second aiming window with slow motion, three landing choices, ballistic jumps and rewards based on the route selected.
 - High roofs, a safe bridge route and narrow bonus perches; ramp launch velocity adapts to running speed.
 - Telegraphs and sound cues before hazards activate. Smoke stays local to its chimney; no full-screen flashes.

@@ -19,7 +19,7 @@ function harness(autospawn=false){
  }}
  return {a,state,physics,scene,rewards,messages,objects,tick,get hits(){return hits}};
 }
-for(let s=0;s<10000;s+=17){assert.equal(bendAt(s,0),0);assert.ok(Math.abs(bendAt(s,.001))<.00001,'curve is tangent to player heading');assert.ok(Number.isFinite(bendAt(s,-150)));}
+for(let s=0;s<10000;s+=17)for(const z of [-150,-60,0,20])assert.equal(bendAt(s,z),0,'world never bends at any distance');
 const d=new EncounterDirector();const order=[];for(let i=0;i<24;i++){const c=d.advance(d.next);order.push(c.id);assert.equal(d.advance(d.next-.01),null);}
 for(let i=0;i<24;i+=8)assert.equal(new Set(order.slice(i,i+8)).size,8,'every deck includes all encounter types');
 assert.equal(smokeStage(.2),'warning');assert.equal(smokeStage(1),'burst');assert.equal(smokeStage(3),'clear');

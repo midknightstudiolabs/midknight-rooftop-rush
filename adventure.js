@@ -1,19 +1,9 @@
 import * as THREE from './three.module.js';
-import {EncounterDirector,bendAt,pounceVelocity,smokeStage} from './rooftops.js?v=city9';
-import {createMidknight} from './character-sprite.js?v=city9';
+import {EncounterDirector,bendAt,pounceVelocity,smokeStage} from './rooftops.js?v=calm10';
+import {createMidknight} from './character-sprite.js?v=calm10';
 
-// One shared deformation keeps every roof edge, prop and hazard on the same curve.
-export function curveMaterial(material,route){
- material.onBeforeCompile=shader=>{
-  shader.uniforms.routeDistance=route;
-  shader.vertexShader='uniform float routeDistance;\nfloat roadX(float s){return 15.*sin(s/83.)+5.*sin(s/31.);}\n'+shader.vertexShader;
-  shader.vertexShader=shader.vertexShader.replace('#include <project_vertex>',`#include <project_vertex>
-   float rz=(modelMatrix*vec4(transformed,1.)).z;
-   float dx=roadX(routeDistance-rz)-roadX(routeDistance)+rz*(15./83.*cos(routeDistance/83.)+5./31.*cos(routeDistance/31.));
-   mvPosition+=viewMatrix*vec4(dx,0.,0.,0.);gl_Position=projectionMatrix*mvPosition;`);
- };
- material.customProgramCacheKey=()=> 'midknight-curved-city-9';return material;
-}
+// Keep the skyline stationary: no vertex warping or moving horizon.
+export function curveMaterial(material){return material;}
 
 export function createAdventure(api){
  const {scene,camera,physics,route,box,ball,mesh,mats,mat,createObject,toast,hit,addStyle,getState}=api;
@@ -142,13 +132,13 @@ export function createAdventure(api){
  function collide(dt){
   const s=getState();
   for(const o of actors){if(o.done)continue;const z=o.mesh.position.z,dx=Math.abs(physics.x-o.mesh.position.x),overlap=o.previousZ<=1&&z>=-1;
-   let contact=false;
-   if(o.type==='chimney')contact=overlap&&dx<.93&&(physics.y<1.35||(o.triggered&&o.stage==='burst'&&physics.y<3.7));
+   let contact=false,hard=true;
+   if(o.type==='chimney'){hard=physics.y<1.35;contact=overlap&&dx<.93&&(hard||(o.triggered&&o.stage==='burst'&&physics.y<3.7));}
    if(o.type==='shutter')contact=overlap&&dx<1.15&&o.t>.55&&physics.y+physics.height>1.2&&physics.y<2.7;
    if(o.type==='pigeons')contact=o.scattered&&o.previousZ-15<=.65&&z-15>=-.65&&dx<.9&&physics.y<.65;
-   if(contact){o.done=true;if(s.rush<=0)hit();else addStyle('MIDKNIGHT MISCHIEF',100);}
+   if(contact&&(hard||!o.smoked)){o.done=hard;o.smoked=true;if(hit(hard))return;}
   }
-  for(const p of platforms){if(p.kind==='line'||p.wallHit)continue;if(Math.abs(p.mesh.position.z)<p.length/2+.1&&Math.abs(physics.x-p.lane*2.8)<p.width/2+.22&&physics.y<p.top-.12){p.wallHit=true;if(s.rush<=0)hit();}}
+  for(const p of platforms){if(p.kind==='line'||p.wallHit)continue;if(Math.abs(p.mesh.position.z)<p.length/2+.1&&Math.abs(physics.x-p.lane*2.8)<p.width/2+.22&&physics.y<p.top-.12){p.wallHit=true;if(hit(true))return;}}
   const support=platforms.find(p=>Math.abs(physics.x-p.lane*2.8)<p.width/2+.12&&Math.abs(p.mesh.position.z)<p.length/2&&physics.grounded&&Math.abs(physics.y-p.top)<.06);
   if(support){
    if(support.kind==='line'){balance+=dt;$('encounterHint').textContent='ON THE LINE · Stay centered. Jump or change lane to dismount.';physics.secondary.tailBase.velocity+=Math.sin(s.time*2)*dt*.1;}
@@ -165,7 +155,7 @@ export function createAdventure(api){
  function setVisible(show){if(!show){rival.root.visible=false;$('aimPanel').hidden=true;$('racePanel').hidden=true;$('encounter').hidden=true;}else if(aim)$('aimPanel').hidden=false;}
  return {reset,advance,collide,render,surfaces,canSpawn,beginAim,releaseAim,realtime,choose,setVisible,
   move(d){return aim?choose(aim.lane+d):false;},get aiming(){return !!aim;},get timeScale(){return aim ? .22 : 1;},get lockedSpeed(){return flight?.speed??null;},get readyToAim(){return !!fork&&!fork.used&&fork.z>=-getState().speed*1.45&&fork.z<=-9;},
-  snapshot(){return {encounter:card?.id??null,encounters:eventCount,aiming:!!aim,selectedLane:aim?.lane??null,racing:!!race,curve:bendAt(getState().distance,-60),platforms:platforms.length,actors:actors.length,clouds:clouds.length};},
+  snapshot(){return {encounter:card?.id??null,hazardLane:card?.lane??null,encounters:eventCount,aiming:!!aim,selectedLane:aim?.lane??null,racing:!!race,curve:bendAt(getState().distance,-60),platforms:platforms.length,actors:actors.length,clouds:clouds.length};},
   // Deterministic entry point also used by the gameplay regression harness.
   buildEncounter(id){const c=director.deck.includes(id)?{id,lane:-1,name:id.toUpperCase(),hint:'',icon:'✦'}:null;if(!c)throw Error('Unknown encounter');build(c);}
  };

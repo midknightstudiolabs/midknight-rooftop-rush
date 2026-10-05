@@ -7,11 +7,11 @@ export const ENCOUNTERS = Object.freeze([
  {id:'collapse',name:'LOOSE TILES',hint:'Take the gold ramp. Keep moving on the crumbling roof.',icon:'▧'},
  {id:'laundry',name:'ON THE LINE',hint:'The gold ramp leads to a laundry line. Balance, then jump.',icon:'⌇'},
  {id:'rival',name:'CATCH THE NIGHT CAT',hint:'Collect gold and land tricks to overtake your rival.',icon:'♜'},
- {id:'corner',name:'CUT THE CORNER',hint:'Bank with the street, or take the raised shortcut.',icon:'↱'}
+ {id:'corner',name:'SKYLINE SHORTCUT',hint:'Take the raised shortcut, or stay on the lower roof.',icon:'↱'}
 ]);
-export const pathX = s => 15*Math.sin(s/83)+5*Math.sin(s/31);
-export const pathSlope = s => 15/83*Math.cos(s/83)+5/31*Math.cos(s/31);
-export const bendAt = (distance,z) => pathX(distance-z)-pathX(distance)+z*pathSlope(distance);
+export const pathX = () => 0;
+export const pathSlope = () => 0;
+export const bendAt = () => 0;
 export function pounceVelocity(y,targetY,seconds){return (targetY-y+13*seconds*seconds)/seconds;}
 export function rampVelocity(speed,y=0,top=2.76){return pounceVelocity(y,top,Math.max(.65,Math.min(1.2,20/speed)));}
 export function smokeStage(seconds){return seconds<.65?'warning':seconds<2.4?'burst':'clear';}

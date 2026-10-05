@@ -61,7 +61,16 @@ export function createMidknight({camera,loader=new THREE.TextureLoader(),tint=0x
  let ready=false,failed=false,disposed=false,gait=0,lastPose=3,cadence=1.5,lean=0;
  const load=url=>loader.loadAsync(url).then(t=>{t.colorSpace=THREE.NoColorSpace;t.minFilter=THREE.LinearFilter;t.magFilter=THREE.LinearFilter;t.generateMipmaps=false;return t;});
  const loaded=load('assets/midknight-rooftop-padded.png').then(atlas=>{if(disposed){atlas.dispose();return;}material.uniforms.runAtlas.value=atlas;material.uniforms.poseAtlas.value=atlas;ready=true;}).catch(error=>{failed=true;throw error;});
- function reset(){gait=0;lastPose=3;cadence=1.5;lean=0;poseWeights.set(0,0,0);tailDynamics.set(0,0,0);earDynamics.set(0,0);bodyDynamics.set(0,0);material.uniforms.poseMix.value=0;}
+ function reset(){gait=0;lastPose=3;cadence=1.5;lean=0;plane.scale.set(1,1,1);plane.position.y=.38*3.5;poseWeights.set(0,0,0);tailDynamics.set(0,0,0);earDynamics.set(0,0);bodyDynamics.set(0,0);material.uniforms.poseMix.value=0;}
+ function animateSplat(seconds,p){
+   if(!ready)return;
+   // Squash around the planted paw line, then settle without bouncing the camera.
+   const t=Math.min(1,Math.max(0,seconds/.32)),s=t*t*(3-2*t);
+   plane.scale.set(1+s*.8,1-s*.89,1);plane.position.y=.38*3.5*plane.scale.y;
+   tailDynamics.set(0,0,0);earDynamics.set(0,0);bodyDynamics.set(0,0);
+   root.position.set(p.x,p.y+.10,0);if(camera)billboard.quaternion.copy(camera.quaternion);
+   material.uniforms.glow.value=0;
+ }
  function animate(dt,p,speed,time,protectedState=false){if(!ready)return;
    // Use the first complete left/right stride, avoiding the mismatched third row.
    // Cadence changes gradually and remains restrained at maximum game speed.
@@ -79,5 +88,5 @@ export function createMidknight({camera,loader=new THREE.TextureLoader(),tint=0x
    material.uniforms.glow.value=THREE.MathUtils.damp(material.uniforms.glow.value,p.phase>0?.35:protectedState?.15:0,4,dt);
  }
  function dispose(){disposed=true;material.uniforms.runAtlas.value?.dispose();plane.geometry.dispose();material.dispose();}
- return {root,animate,loaded,reset,dispose,get ready(){return ready;},get failed(){return failed;}};
+ return {root,animate,animateSplat,loaded,reset,dispose,get ready(){return ready;},get failed(){return failed;}};
 }

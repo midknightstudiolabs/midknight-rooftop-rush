@@ -16,16 +16,17 @@ const inputHandlers=new Map();
 const ctx={curveMaterial,createAdventure:(api)=>createAdventure({...api,avatarFactory:createMidknight}),bendAt,rampVelocity,THREE:{...Three,WebGLRenderer:class{setPixelRatio(){}setSize(){}render(){}}},CatPhysics,STEP,sweptOverlap,createMidknight,document:{getElementById:element,body:element('body'),addEventListener(){},modelContext:{registerTool(t){registered.set(t.name,t)}}},localStorage:{getItem(){return '0'},setItem(){}},window:{},innerWidth:1440,innerHeight:900,devicePixelRatio:1,requestAnimationFrame(){},addEventListener(name,fn){inputHandlers.set(name,fn)},performance,console,Math,AbortController,Error};
 const source=fs.readFileSync(new URL('../game.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'');vm.createContext(ctx);vm.runInContext(source,ctx);const run=code=>vm.runInContext(code,ctx);const reset=()=>run('sound=false;start();spawnClock=999;invincible=0;');
 await run('avatar.loaded');
-reset();run("createObject('barrier',0,-.1);update(STEP);");assert.equal(run('lives'),2);run('update(STEP)');assert.equal(run('lives'),2);
+reset();run("createObject('barrier',0,-.1);update(STEP);");assert.equal(run('lives'),0);assert.equal(run('mode'),'splat');const crashDistance=run('distance');run('update(STEP)');assert.equal(run('distance'),crashDistance);
 reset();run("duck();for(let i=0;i<30;i++)update(STEP);createObject('overhead',0,-.1);for(let i=0;i<10;i++)update(STEP);");assert.equal(run('lives'),3);assert.equal(run('tricks'),1);assert.equal(run('combo'),1);
-reset();run("shield=5;createObject('penthouse',0,-.1);update(STEP);");assert.equal(run('lives'),3);assert.equal(run('shield'),0);
-reset();run("for(let i=0;i<20;i++){createObject('coin',0,-.1);update(STEP);}createObject('penthouse',0,-.1);update(STEP);");assert.equal(run('coins'),20);assert.ok(run('rush')>6);assert.equal(run('lives'),3);
+reset();run("shield=5;createObject('penthouse',0,-.1);update(STEP);");assert.equal(run('mode'),'splat');assert.equal(run('shield'),0);
+reset();run('shield=5;hit(false);');assert.equal(run('lives'),3);assert.equal(run('shield'),0);
+reset();run("for(let i=0;i<20;i++){createObject('coin',0,-.1);update(STEP);}");assert.equal(run('coins'),20);assert.ok(run('rush')>6);run("createObject('penthouse',0,-.1);update(STEP);");assert.equal(run('mode'),'splat');
 for(const meters of [0,2700]){reset();run(`distance=${meters};speed=16+Math.min(distance/180,15);createObject('penthouse',0,-20);createObject('ramp',0,-6);for(let i=0;i<360;i++)update(STEP);`);assert.equal(run('lives'),3,`penthouse ramp at ${meters} m`);}
 reset();run("createObject('roof',0,-28);createObject('ramp',0,-7);for(let i=0;i<450;i++)update(STEP);");assert.equal(run('lives'),3,'long rooftop is safe');assert.ok(run('tricks')>=1);
-reset();run("physics.pounce();createObject('barrier',0,-.1);for(let i=0;i<15;i++)update(STEP);");assert.equal(run('lives'),3);assert.equal(run('tricks'),1,'phase-through earns ghost paws');
+reset();run("physics.pounce();createObject('barrier',0,-.1);for(let i=0;i<15;i++)update(STEP);");assert.equal(run('mode'),'splat');assert.equal(run('tricks'),0,'solid objects stop Moon Pounce too');
 reset();run("lives=2;for(let k=0;k<3;k++){physics.y=3.55;physics.grounded=false;physics.vy=0;createObject('gate',0,-.1,3.7);update(STEP);}");assert.equal(run('gates'),3);assert.equal(run('awakened'),1);assert.equal(run('lives'),3);assert.ok(run('styleScore')>=2500);assert.equal(run('physics.moon'),3);
 run('pause();');const before=run('distance');run('update(.04)');assert.equal(run('distance'),before);run('pause();update(STEP)');assert.ok(run('distance')>before);
-reset();run("lives=1;createObject('barrier',0,-.1);update(STEP);");assert.equal(run('mode'),'over');run('start()');assert.equal(run('lives'),3);assert.equal(run('styleScore'),0);assert.equal(run('gates'),0);assert.equal(run('physics.moon'),3);
+reset();run("lives=1;createObject('barrier',0,-.1);update(STEP);");assert.equal(run('mode'),'splat');run('for(let i=0;i<150;i++)update(STEP);');assert.equal(run('mode'),'over');run('start()');assert.equal(run('lives'),3);assert.equal(run('styleScore'),0);assert.equal(run('gates'),0);assert.equal(run('physics.moon'),3);
 assert.equal(registered.size,2);assert.throws(()=>registered.get('control_run').execute({action:'invalid'}));registered.get('control_run').execute({action:'pause'});assert.equal(registered.get('read_run_state').execute().state,'paused');registered.get('control_run').execute({action:'resume'});
 const camera=new Three.PerspectiveCamera();camera.position.set(0,4.1,8.3);camera.lookAt(0,1.25,-14);
 const avatar=createMidknight({camera}),anim=new CatPhysics();await avatar.loaded;assert.equal(avatar.ready,true);
@@ -56,7 +57,7 @@ run('update(STEP)');assert.ok(Math.abs(run('scene.background.r')-initialLight)<.
 console.log('PASS: physics, jump height/buffering/coyote time, pounce limits, rooftop landings, spring lanes, swept collisions, shields/rush, ramp speeds, combos/gates/healing, pause/restart, structured controls, texture readiness/failure, eight-frame stride, loop duration, air/crouch/landing blends and paw alignment.');
 
 // Exercise the actual game loop across multiple full encounter decks.
-reset();run('for(let i=0;i<20000;i++){invincible=100;update(STEP);}');
+reset();run("for(let i=0;i<20000;i++){const city=adventure.snapshot();physics.lane=['chimney','shutters'].includes(city.encounter)?-city.hazardLane:0;update(STEP);}");
 assert.equal(run('mode'),'running');assert.ok(run('adventure.snapshot().encounters')>16);
 assert.ok(run('objects.length')<100,'encounter collectibles are recycled');
 assert.ok(run('adventure.snapshot().platforms')<8);
@@ -71,3 +72,25 @@ console.log('PASS: extended live-loop integration, aim keyboard selection/releas
 
 
 
+
+// A crash freezes every world object, rejects movement and preserves the impact spot.
+reset();run("createObject('barrier',0,-2);while(mode==='running')update(STEP);");
+const stopped=run('({distance,z:objects[0].mesh.position.z,x:physics.x})');
+run('move(1);jump();duck();for(let i=0;i<75;i++)frame(last+1000/60);');
+assert.equal(run('distance'),stopped.distance);assert.equal(run('objects[0].mesh.position.z'),stopped.z);assert.equal(run('physics.x'),stopped.x);assert.equal(run('speed'),0);assert.equal(run('mode'),'over');
+run('start();');assert.equal(run('splatEnded'),false);assert.ok(run('speed')>0);
+// Fixed camera: lane changes, airborne motion, Rush and restart cannot move it.
+const fixedCamera=run('camera.position.toArray().concat(camera.quaternion.toArray(),camera.fov)').join(',');
+run('physics.lane=1;physics.launch(17);rush=7;for(let i=0;i<90;i++)frame(last+1000/60);');
+assert.equal(run('camera.position.toArray().concat(camera.quaternion.toArray(),camera.fov)').join(','),fixedCamera);
+reset();assert.equal(run('camera.position.toArray().concat(camera.quaternion.toArray(),camera.fov)').join(','),fixedCamera);
+const liquid=createMidknight({camera});await liquid.loaded;let liquidMesh;liquid.root.traverse(o=>{if(o.isMesh)liquidMesh=o;});
+liquid.animateSplat(.5,new CatPhysics());assert.ok(liquidMesh.scale.y<.12&&liquidMesh.scale.x>1.7);assert.ok(Math.abs(liquidMesh.position.y-1.33*liquidMesh.scale.y)<1e-9,'paws stay anchored while flattening');liquid.reset();assert.equal(liquidMesh.scale.y,1);assert.equal(liquidMesh.scale.x,1);liquid.dispose();
+console.log('PASS: solid-impact stop, liquid splat, frozen world, input lock, safe restart and fixed camera/FOV.');
+
+// A fixed camera still needs to show both outer lanes on tall phone screens.
+ctx.innerWidth=390;ctx.innerHeight=844;inputHandlers.get('resize')();
+run('camera.updateMatrixWorld(true);');
+for(const x of [-4.6,4.6])assert.ok(Math.abs(run(`new THREE.Vector3(${x},1.5,0).project(camera).x`))<1,'outer lane fits portrait viewport');
+ctx.innerWidth=1440;ctx.innerHeight=900;inputHandlers.get('resize')();run('camera.updateMatrixWorld(true);');
+assert.ok(run('new THREE.Vector3(0,10.5,0).project(camera).y')<1,'high pounce fits without moving the camera');
