@@ -2,7 +2,7 @@
 
 A browser playtest starring Midknight, a fluffy black tuxedo cat, running across a moonlit rooftop district.
 
-**[Play in your browser](https://carlosgotiong.github.io/midknight-rooftop-rush/)**
+**[Play in your browser](https://midknightstudiolabs.github.io/midknight-rooftop-rush/)**
 
 No installation, account or API key is needed to play. Desktop keyboard and mobile touch controls are supported. The game requires WebGL.
 
