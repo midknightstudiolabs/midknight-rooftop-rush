@@ -1,10 +1,11 @@
 import * as THREE from './three.module.js';
-import {createMidknight} from './character-sprite.js?v=bends12';
-import {CatPhysics,STEP,sweptOverlap} from './physics.js?v=bends12';
-import {curveMaterial,createAdventure} from './adventure.js?v=bends12';
-import {bendAt,rampVelocity,pounceVelocity} from './rooftops.js?v=bends12';
-import {RoofLayout,Nitro} from './terrain.js?v=bends12';
-const route={value:0},terrain=new RoofLayout(),nitro=new Nitro();
+import {createMidknight} from './character-sprite.js?v=speedster13';
+import {CatPhysics,STEP,sweptOverlap} from './physics.js?v=speedster13';
+import {curveMaterial,createAdventure} from './adventure.js?v=speedster13';
+import {bendAt,rampVelocity,pounceVelocity} from './rooftops.js?v=speedster13';
+import {RoofLayout,Nitro} from './terrain.js?v=speedster13';
+import {Speedster,createSpeedTrail} from './speedster.js?v=speedster13';
+const route={value:0},terrain=new RoofLayout(),nitro=new Nitro(),speedster=new Speedster();
 
 const $=id=>document.getElementById(id);
 const scene=new THREE.Scene();scene.background=new THREE.Color('#21102f');scene.fog=new THREE.Fog('#21102f',35,165);
@@ -63,6 +64,7 @@ ball(new THREE.MeshBasicMaterial({color:0xffbcaf}),[-21,37,-150],[10,10,1]);
 const starsGeo=new THREE.BufferGeometry();const starPos=[];for(let i=0;i<300;i++)starPos.push((rand()-.5)*300,18+rand()*80,-30-rand()*180);starsGeo.setAttribute('position',new THREE.Float32BufferAttribute(starPos,3));scene.add(new THREE.Points(starsGeo,new THREE.PointsMaterial({color:0xcab8ef,size:.14,transparent:true,opacity:.7})));
 
 const avatar=createMidknight({camera}),cat=avatar.root;scene.add(cat);
+const speedTrail=createSpeedTrail(scene);
 const shadow=mesh(new THREE.CircleGeometry(.7,28),new THREE.MeshBasicMaterial({color:0x080511,transparent:true,opacity:.38}),[0,.18,0],[1,1.6,1]);shadow.rotation.x=-Math.PI/2;
 const physics=new CatPhysics();
 let splatTime=0,splatFromY=0,splatFloor=0,splatEnded=false,motionScale=1;
@@ -75,10 +77,10 @@ let objects=[],particles=[],sound=true,audioCtx=null,beat=0;const notes=[130.81,
 function audioInit(){if(!sound)return;try{audioCtx??=new(window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();}catch{sound=false;}}
 function tone(freq=660,dur=.1,volume=.04,type='sine'){if(!sound||!audioCtx)return;const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.setValueAtTime(freq,audioCtx.currentTime);g.gain.setValueAtTime(volume,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+dur);o.connect(g);g.connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+dur);}
 function toast(s){$('toast').textContent=s;$('toast').classList.add('show');toastTimer=1.7;}
-function setMode(m){mode=m;$('menu').hidden=m!=='menu';$('hud').hidden=m==='menu';$('pauseScreen').hidden=m!=='paused';$('endScreen').hidden=m!=='over';document.body.classList.toggle('playing',m!=='menu');cat.visible=m!=='menu';shadow.visible=cat.visible;$('pounceBtn').hidden=m!=='running';$('nitroBtn').hidden=m!=='running';$('steerControls').hidden=m!=='running';if(m!=='running')nitro.release();adventure.setVisible(m==='running');}
+function setMode(m){mode=m;$('menu').hidden=m!=='menu';$('hud').hidden=m==='menu';$('pauseScreen').hidden=m!=='paused';$('endScreen').hidden=m!=='over';document.body.classList.toggle('playing',m!=='menu');cat.visible=m!=='menu';shadow.visible=cat.visible;$('pounceBtn').hidden=m!=='running';$('nitroBtn').hidden=m!=='running';$('steerControls').hidden=m!=='running';if(m!=='running'){nitro.release();speedster.reset();speedTrail.reset();}adventure.setVisible(m==='running');}
 function clearObjects(){objects.forEach(o=>scene.remove(o.mesh));objects=[];particles.forEach(p=>scene.remove(p.mesh));particles=[];}
 function resetCity(){awakened=0;districtGlow=0;districtTint.set('#21102f');buildingMats.forEach(m=>m.emissiveIntensity=0);scene.fog.color.set('#21102f');scene.background.set('#21102f');}
-function start(){if(!avatar.ready){toast(avatar.failed?"CHARACTER COULD NOT LOAD · RELOAD TO RETRY":"MIDKNIGHT IS GETTING READY…");return;}avatar.reset();audioInit();clearObjects();physics.reset();resetCity();adventure.reset();resetRoofs();nitro.reset();splatTime=0;splatEnded=false;motionScale=1;accumulator=0;distance=0;coins=0;lives=3;charge=0;rush=0;shield=0;magnet=0;invincible=2;speed=12;spawnClock=1.5;beat=0;styleScore=0;combo=0;comboTimer=0;tricks=0;gates=0;shake=0;gateHint=false;setComfortCamera();avatar.animate(0,physics,speed,time);setMode('running');toast('FOLLOW THE MOONLIGHT');updateHud();}
+function start(){if(!avatar.ready){toast(avatar.failed?"CHARACTER COULD NOT LOAD · RELOAD TO RETRY":"MIDKNIGHT IS GETTING READY…");return;}avatar.reset();audioInit();clearObjects();physics.reset();resetCity();adventure.reset();resetRoofs();nitro.reset();speedster.reset();speedTrail.reset();splatTime=0;splatEnded=false;motionScale=1;accumulator=0;distance=0;coins=0;lives=3;charge=0;rush=0;shield=0;magnet=0;invincible=2;speed=12;spawnClock=1.5;beat=0;styleScore=0;combo=0;comboTimer=0;tricks=0;gates=0;shake=0;gateHint=false;setComfortCamera();avatar.animate(0,physics,speed,time);setMode('running');toast('FOLLOW THE MOONLIGHT');updateHud();}
 function home(){clearObjects();adventure.reset();rush=0;shield=0;magnet=0;physics.phase=0;$('rushFx').classList.remove('active');$('phaseFx').classList.remove('active');setMode('menu');$('menuBest').textContent=String(Math.floor(best)).padStart(5,'0');}
 function pause(){if(mode==='running')setMode('paused');else if(mode==='paused'){setMode('running');audioInit();}}
 function finish(){const previousBest=best;best=Math.max(best,Math.floor(distance));try{localStorage.setItem('midknight-rush-best',String(best));}catch{}$('endScore').textContent=Math.floor(distance);$('endCoins').textContent=coins;$('endBest').textContent=best;$('endStyle').textContent=styleScore.toLocaleString();$('endGates').textContent=gates;$('endTricks').textContent=tricks;$('endEyebrow').textContent=distance>previousBest?'✦ NEW PERSONAL BEST':'THE MOON WILL WAIT';$('endMessage').textContent=awakened?`${awakened} district${awakened===1?'':'s'} awakened. Leave a little more light next time.`:'Those rooftops still have secrets to find.';if(splatEnded){$('endEyebrow').textContent='CAT IS LIQUID.';$('endMessage').textContent='The wall was solid. Midknight was briefly a puddle. Ready to re-inflate?';}setMode('over');tone(164,.5,.06,'triangle');$('rushFx').classList.remove('active');$('phaseFx').classList.remove('active');}
@@ -118,11 +120,13 @@ function createObject(type,l,z,height=0){const g=new THREE.Group();g.position.se
  scene.add(g);const obj={type,l,mesh:g,len,done:false,height,previousZ:z,close:false,cleared:false,failed:false};objects.push(obj);return obj;
 }
 const adventure=createAdventure({scene,camera,physics,route,box,ball,mesh,mats,mat,createObject,toast,hit,addStyle,tone,scheduleRoute:(start,side)=>{terrain.schedule(start,side);syncRoofs();},getState:()=>({distance,speed,time,styleScore,rush})});
-function updateHud(){$('score').textContent=Math.floor(distance);$('coins').textContent=coins;$('bestHud').textContent=`BEST ${best} m`;$('hearts').textContent='♥ '.repeat(Math.max(lives,0))+'♡ '.repeat(3-Math.max(lives,0));$('hearts').setAttribute('aria-label',`${lives} lives`);$('charge').style.width=nitro.fuel+'%';$('chargeLabel').textContent=Math.floor(nitro.fuel)+'%';$('nitroBtn').classList.toggle('active',nitro.active);$('nitroBtn').setAttribute('aria-pressed',String(nitro.held));$('nitroFuel').textContent=Math.floor(nitro.fuel)+'%';$('powerStatus').textContent=nitro.active?'NITRO · RELEASE TO COAST':shield>0?`SHIELD · ${Math.ceil(shield)}s`:magnet>0?`GOLD MAGNET · ${Math.ceil(magnet)}s`:'HOLD N / NITRO · GOLD REFILLS FUEL';$('rushFx').classList.toggle('active',rush>0);$('phaseFx').classList.toggle('active',physics.phase>0);$('district').textContent=`WAKE THE CITY · ${gates%3} / 3 GATES`;$('moonCount').textContent='● '.repeat(physics.moon)+'○ '.repeat(3-physics.moon);$('moonRegen').style.width=physics.moon===3?'100%':`${physics.regen/9*100}%`;$('styleScore').textContent=styleScore.toLocaleString();$('combo').textContent=combo?`×${combo} · ${comboTimer.toFixed(1)}s`:'FIND YOUR FLOW';$('combo').classList.toggle('hot',combo>1);$('pounceBtn').disabled=physics.moon<1||physics.airPounced;$('pounceLabel').textContent='POUNCE';$('pounceBtn').setAttribute('aria-label',`Moon pounce, ${physics.moon} charges`);}
+function updateHud(){$('score').textContent=Math.floor(distance);$('coins').textContent=coins;$('bestHud').textContent=`BEST ${best} m`;$('hearts').textContent='♥ '.repeat(Math.max(lives,0))+'♡ '.repeat(3-Math.max(lives,0));$('hearts').setAttribute('aria-label',`${lives} lives`);$('charge').style.width=nitro.fuel+'%';$('chargeLabel').textContent=Math.floor(nitro.fuel)+'%';$('nitroBtn').classList.toggle('active',nitro.active);$('nitroBtn').setAttribute('aria-pressed',String(nitro.held));$('nitroFuel').textContent=Math.floor(nitro.fuel)+'%';$('nitroMode').textContent=nitro.active?'ϟ SPEEDSTER':'ϟ NITRO';$('powerStatus').textContent=nitro.active?'SPEEDSTER · WORLD IN SLOW MOTION':shield>0?`SHIELD · ${Math.ceil(shield)}s`:magnet>0?`GOLD MAGNET · ${Math.ceil(magnet)}s`:'HOLD N / NITRO · GOLD REFILLS FUEL';$('rushFx').classList.toggle('active',rush>0);$('phaseFx').classList.toggle('active',physics.phase>0);$('district').textContent=`WAKE THE CITY · ${gates%3} / 3 GATES`;$('moonCount').textContent='● '.repeat(physics.moon)+'○ '.repeat(3-physics.moon);$('moonRegen').style.width=physics.moon===3?'100%':`${physics.regen/9*100}%`;$('styleScore').textContent=styleScore.toLocaleString();$('combo').textContent=combo?`×${combo} · ${comboTimer.toFixed(1)}s`:'FIND YOUR FLOW';$('combo').classList.toggle('hot',combo>1);$('pounceBtn').disabled=physics.moon<1||physics.airPounced;$('pounceLabel').textContent='POUNCE';$('pounceBtn').setAttribute('aria-label',`Moon pounce, ${physics.moon} charges`);}
 function update(dt){
  if(mode==='splat'){splatTime+=dt;const fall=Math.min(1,splatTime/.55);physics.y=splatFromY+(splatFloor-splatFromY)*(fall*fall*(3-2*fall));avatar.animateSplat(splatTime,physics);shadow.position.set(physics.x,splatFloor+.035,0);shadow.scale.set(1.65,1.6,1);if(splatTime>=1.15)finish();return;}
- if(mode!=='running'&&mode!=='menu')return;time+=dt;const lightBlend=1-Math.exp(-dt*.7);scene.fog.color.lerp(districtTint,lightBlend);scene.background.copy(scene.fog.color);buildingMats.forEach(m=>m.emissiveIntensity=THREE.MathUtils.damp(m.emissiveIntensity,districtGlow,.7,dt));toastTimer-=dt;if(toastTimer<=0)$('toast').classList.remove('show');
- if(mode==='running'){nitro.step(dt,physics.grounded);const targetSpeed=12+Math.min(distance/900,4)+(nitro.active?4:0);if(physics.grounded)speed=THREE.MathUtils.damp(speed,targetSpeed,1.8,dt);}const step=(mode==='running'?speed:0)*dt;
+ if(mode!=='running'&&mode!=='menu')return;
+ const realDt=dt;if(mode==='running'){nitro.step(realDt);speedster.step(realDt,nitro.active);}dt*=speedster.worldScale;
+ time+=dt;const lightBlend=1-Math.exp(-dt*.7);scene.fog.color.lerp(districtTint,lightBlend);scene.background.copy(scene.fog.color);buildingMats.forEach(m=>m.emissiveIntensity=THREE.MathUtils.damp(m.emissiveIntensity,districtGlow,.7,dt));toastTimer-=dt;if(toastTimer<=0)$('toast').classList.remove('show');
+ if(mode==='running'){const targetSpeed=12+Math.min(distance/900,4)+(nitro.active?4:0);if(physics.grounded)speed=THREE.MathUtils.damp(speed,targetSpeed,1.8,realDt);}const step=(mode==='running'?speed:0)*dt;
  for(const o of roofSections){o.position.z+=step;if(o.position.z>18){o.position.z-=276;o.userData.index+=23;}}syncRoofs();terrain.prune(distance);
  for(const a of [arches])for(const o of a){o.position.z+=step;if(o.position.z>22)o.position.z-=a===scenery?246.4:a===lamps?234:240;}
  if(mode==='menu')return;
@@ -130,7 +134,7 @@ function update(dt){
  for(const o of objects){o.previousZ=o.mesh.position.z;o.mesh.position.z+=step;}
  adventure.advance(dt,step);
  const surfaces=objects.filter(o=>o.type==='penthouse'||o.type==='roof').map(o=>({x:o.mesh.position.x,z:o.mesh.position.z,halfWidth:1.2,halfLength:o.len/2,top:2.76})).concat(adventure.surfaces());
- physics.step(dt,surfaces,terrain.supported(distance,physics.x),terrain.offsetAt(distance));if(physics.y < -3){lives=0;nitro.release();finish();$('endEyebrow').textContent='MIND THE GAP';$('endMessage').textContent='Choose a lit roof, or jump across the gap. Your next run starts here.';return;}adventure.collide(dt);if(mode!=='running')return;
+ physics.step(dt,surfaces,terrain.supported(distance,physics.x),terrain.offsetAt(distance),realDt);if(physics.y < -3){lives=0;nitro.release();finish();$('endEyebrow').textContent='MIND THE GAP';$('endMessage').textContent='Choose a lit roof, or jump across the gap. Your next run starts here.';return;}adventure.collide(dt);if(mode!=='running')return;
  if(physics.landed&&physics.impact>7){burst(new THREE.Vector3(physics.x,physics.y+.12,0),mats.white,5);tone(95,.06,.023,'triangle');}
  spawnClock-=dt;if(spawnClock<=0&&adventure.canSpawn()){for(let k=0;k<6;k++){const z=-38-k*2.2,lanes=terrain.lanes(terrain.indexAt(distance-z));createObject('coin',lanes.includes(0)?0:lanes[0],z);}spawnClock=2.8;}beat+=dt;if(beat>.26){beat=0;tone(notes[Math.floor(time/.26)%8],.13,.012,'triangle');}
  for(let i=objects.length-1;i>=0;i--){const o=objects[i],dz=o.mesh.position.z,dx=Math.abs(o.mesh.position.x-physics.x),overlap=sweptOverlap(o.previousZ,dz,o.len/2);
@@ -155,7 +159,7 @@ function update(dt){
 let last=performance.now(),accumulator=0,hudClock=0;function frame(now){const elapsed=Math.min((now-last)/1000,.1);last=now;motionScale=1;accumulator+=elapsed;while(accumulator>=STEP){update(STEP);accumulator-=STEP;}if(mode==='running'){
  cat.visible=true;shadow.visible=terrain.supported(distance,physics.x);shadow.position.set(physics.x,physics.y>2.75?2.8:.035,0);shadow.scale.set(1-physics.y*.055,1.6-physics.y*.09,1);shadow.material.opacity=Math.max(.1,.38-physics.y*.045);
  // Fixed camera and fixed FOV: jumping, turns and Rush never move the horizon.
- avatar.animate(elapsed*motionScale,physics,speed,time,shield>0||rush>0);adventure.render(elapsed*motionScale);}
+ avatar.animate(elapsed,physics,speed,time,shield>0||rush>0,speedster.strideScale);speedTrail.update(elapsed,physics,speedster.amount);adventure.render(elapsed*speedster.worldScale);}
  hudClock+=elapsed;if(hudClock>=.06){if(mode==='running')updateHud();hudClock=0;}renderer.render(scene,camera);requestAnimationFrame(frame);}
 setMode('menu');requestAnimationFrame(frame);
 addEventListener('resize',()=>{setComfortCamera();renderer.setSize(innerWidth,innerHeight);});

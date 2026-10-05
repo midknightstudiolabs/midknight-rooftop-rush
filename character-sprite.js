@@ -71,11 +71,11 @@ export function createMidknight({camera,loader=new THREE.TextureLoader(),tint=0x
    root.position.set(p.x,p.y+.10,0);if(camera)billboard.quaternion.copy(camera.quaternion);
    material.uniforms.glow.value=0;
  }
- function animate(dt,p,speed,time,protectedState=false){if(!ready)return;
+ function animate(dt,p,speed,time,protectedState=false,strideScale=1){if(!ready)return;
    // Use the first complete left/right stride, avoiding the mismatched third row.
    // Cadence changes gradually and remains restrained at maximum game speed.
    cadence=THREE.MathUtils.damp(cadence,1.5*THREE.MathUtils.clamp(speed/16,1,1.3),4,dt);
-   gait=(gait+dt*cadence)%1;
+   gait=(gait+dt*cadence*strideScale)%1;
    const cursor=gait*8,a=Math.floor(cursor);material.uniforms.frameA.value=a;material.uniforms.frameB.value=(a+1)%8;material.uniforms.frameMix.value=cursor-a;
    let pose=-1;if(p.crouch>.35)pose=1;else if(!p.grounded)pose=0;else if(p.landing>.25)pose=2;
    if(pose>=0)lastPose=pose;

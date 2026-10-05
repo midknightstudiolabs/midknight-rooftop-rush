@@ -3,6 +3,7 @@ import * as THREE from '../three.module.js';
 import {createAdventure,curveMaterial} from '../adventure.js';
 import {ENCOUNTERS,EncounterDirector,bendAt,pounceVelocity,rampVelocity,smokeStage} from '../rooftops.js';
 import {CatPhysics,STEP} from '../physics.js';
+import {Speedster} from '../speedster.js';
 const elements=new Map();globalThis.document={getElementById(id){if(!elements.has(id))elements.set(id,{hidden:false,style:{},textContent:'',classList:{toggle(){}},setAttribute(){}});return elements.get(id);}};
 function harness(autospawn=false){
  const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(),physics=new CatPhysics(),route={value:0};
@@ -13,9 +14,9 @@ function harness(autospawn=false){
  const box=(m,p,s,parent)=>mesh(new THREE.BoxGeometry(),m,p,s,parent),ball=(m,p,s,parent)=>mesh(new THREE.SphereGeometry(1,8,6),m,p,s,parent);
  const a=createAdventure({scene,camera,physics,route,mat,mats,mesh,box,ball,autospawn,avatarFactory:()=>({loaded:Promise.resolve(),root:new THREE.Group(),ready:true,animate(){}}),getState:()=>state,toast:s=>messages.push(s),hit:()=>{hits++},addStyle:(label,points)=>{rewards.push(label);state.styleScore+=points},createObject:(type,l,z,height=0)=>{const o={type,l,z,height,done:false};objects.push(o);return o;}});
  function tick(seconds){for(let i=0;i<Math.round(seconds/STEP);i++){
-  const travel=state.speed*STEP;state.distance+=travel;state.time+=STEP;a.advance(STEP,travel);
+  const dt=STEP*(state.timeScale??1),travel=state.speed*dt;state.distance+=travel;state.time+=dt;a.advance(dt,travel);
   for(const o of objects){o.z+=travel;if(o.type==='ramp'&&!o.done&&Math.abs(o.z)<1.65&&Math.abs(physics.x-o.l*2.8)<1.05&&physics.y<.7){physics.launch(o.routeRamp?rampVelocity(state.speed,physics.y,o.routeTop??2.76):14.5);o.done=true;}}
-  physics.step(STEP,a.surfaces());a.collide(STEP);a.render(STEP);
+  physics.step(dt,a.surfaces(),true,0,STEP);a.collide(dt);a.render(dt);
  }}
  return {a,state,physics,scene,rewards,messages,objects,tick,get hits(){return hits}};
 }
@@ -41,3 +42,12 @@ for(const win of [false,true]){const h=harness();h.a.buildEncounter('rival');h.t
 // Long sessions recycle actors and platforms instead of accumulating a city forever.
 {const h=harness(true);h.state.rush=10000;h.state.speed=40;for(let i=0;i<900;i++){h.tick(.1);const s=h.a.snapshot();assert.ok(s.actors<20&&s.platforms<8&&s.clouds<=28);}assert.ok(h.a.snapshot().encounters>10);}
 console.log('PASS: all eight encounters, safe routes, reactive smoke/shutters/pigeons, continuous forks, high routes at 12–40 m/s, race win/loss and bounded cleanup.');
+
+// Release/reapply time dilation while crossing each elevated route. Vertical
+// physics and world travel must stay synchronized through both transitions.
+for(const kind of ['fork','collapse','laundry','corner'])for(const speed of [12,20]){
+ const h=harness(),fx=new Speedster();h.state.speed=speed;h.physics.x=-2.8;h.physics.lane=-1;h.a.buildEncounter(kind);
+ for(let i=0;i<2400;i++){fx.step(STEP,h.state.distance>40&&h.state.distance<70||h.state.distance>83&&h.state.distance<90);h.state.timeScale=fx.worldScale;h.tick(STEP);}
+ assert.equal(h.hits,0,kind+' remains safe when toggling slow motion at '+speed);assert.ok(h.rewards.length>0);
+}
+console.log('PASS: ramp landings when Speedster engages and releases mid-flight.');

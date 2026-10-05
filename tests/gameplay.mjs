@@ -1,3 +1,4 @@
+import {Speedster,createSpeedTrail} from '../speedster.js';
 import {RoofLayout,Nitro} from '../terrain.js';
 import {curveMaterial,createAdventure} from '../adventure.js';import {bendAt,rampVelocity,pounceVelocity} from '../rooftops.js';
 import fs from 'node:fs';import assert from 'node:assert/strict';import vm from 'node:vm';import * as Three from '../three.module.js';import {CatPhysics,PHYSICS,STEP,sweptOverlap} from '../physics.js';import {createMidknight as createSprite} from '../character-sprite.js';
@@ -14,7 +15,7 @@ const spring=new CatPhysics();spring.move(1);spring.step(STEP);assert.ok(spring.
 const elements=new Map(),registered=new Map();const element=id=>{if(!elements.has(id))elements.set(id,{style:{},classList:{add(){},remove(){},toggle(){}},addEventListener(name,fn){this.handlers??=new Map();this.handlers.set(name,fn);},setAttribute(){},hidden:false,textContent:'',showModal(){this.open=true},close(){this.open=false},setPointerCapture(){}});return elements.get(id);};
 globalThis.document={getElementById:element};
 const inputHandlers=new Map();
-const ctx={RoofLayout,Nitro,curveMaterial,createAdventure:(api)=>createAdventure({...api,avatarFactory:createMidknight}),bendAt,rampVelocity,pounceVelocity,THREE:{...Three,WebGLRenderer:class{setPixelRatio(){}setSize(){}render(){}}},CatPhysics,STEP,sweptOverlap,createMidknight,document:{getElementById:element,body:element('body'),addEventListener(){},modelContext:{registerTool(t){registered.set(t.name,t)}}},localStorage:{getItem(){return '0'},setItem(){}},window:{},innerWidth:1440,innerHeight:900,devicePixelRatio:1,requestAnimationFrame(){},addEventListener(name,fn){inputHandlers.set(name,fn)},performance,console,Math,AbortController,Error};
+const ctx={Speedster,createSpeedTrail,RoofLayout,Nitro,curveMaterial,createAdventure:(api)=>createAdventure({...api,avatarFactory:createMidknight}),bendAt,rampVelocity,pounceVelocity,THREE:{...Three,WebGLRenderer:class{setPixelRatio(){}setSize(){}render(){}}},CatPhysics,STEP,sweptOverlap,createMidknight,document:{getElementById:element,body:element('body'),addEventListener(){},modelContext:{registerTool(t){registered.set(t.name,t)}}},localStorage:{getItem(){return '0'},setItem(){}},window:{},innerWidth:1440,innerHeight:900,devicePixelRatio:1,requestAnimationFrame(){},addEventListener(name,fn){inputHandlers.set(name,fn)},performance,console,Math,AbortController,Error};
 const source=fs.readFileSync(new URL('../game.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'');vm.createContext(ctx);vm.runInContext(source,ctx);const run=code=>vm.runInContext(code,ctx);const reset=()=>run('sound=false;start();spawnClock=999;invincible=0;');
 await run('avatar.loaded');
 reset();run("createObject('barrier',0,-.1);update(STEP);");assert.equal(run('lives'),0);assert.equal(run('mode'),'splat');const crashDistance=run('distance');run('update(STEP)');assert.equal(run('distance'),crashDistance);
@@ -104,3 +105,14 @@ run("distance=180;const o=createObject('coin',1,-6);globalThis.coinX=o.mesh.posi
 reset();const skyline=run('scenery.map(g=>g.position.toArray().join()).join()');run('for(let i=0;i<120;i++)update(STEP);');assert.equal(run('scenery.map(g=>g.position.toArray().join()).join()'),skyline,'distant skyline is stationary');
 assert.ok(run('skylineBatches.size')<12,'skyline uses a small number of material batches');
 console.log('PASS: steering buttons, curved roof geometry, pickup alignment and stationary batched skyline.');
+
+reset();run('for(let i=0;i<120;i++)update(STEP);');const normalTravel=run('distance'),normalTime=run('time');
+reset();const boostStart=run('time');run('nitro.press();for(let i=0;i<120;i++)update(STEP);');
+assert.ok(run('distance')<normalTravel*.7,'boost gives more real reaction time');assert.ok(run('time')-boostStart<.55,'hazards and effects run on slowed world time');
+assert.ok(run('speedster.strideScale')>1.54);assert.ok(Math.abs(run('nitro.fuel')-32)<1e-8);
+const boostCamera=run('camera.position.toArray().concat(camera.quaternion.toArray(),camera.fov)').join(',');run('frame(last+16);');assert.ok(run('speedTrail.visible'));
+assert.equal(run('camera.position.toArray().concat(camera.quaternion.toArray(),camera.fov)').join(','),boostCamera);
+run('physics.pounce();update(STEP);');assert.ok(run('nitro.active'),'boost continues through a jump');
+run('pause();');assert.equal(run('speedster.amount'),0);assert.equal(run('speedTrail.visible'),false);run('home();start();');assert.equal(run('speedster.worldScale'),1);
+reset();run("nitro.press();createObject('barrier',0,-.1);update(STEP);");assert.equal(run('mode'),'splat');assert.equal(run('speedster.amount'),0);assert.equal(run('speedTrail.visible'),false);
+console.log('PASS: slowed world clock and travel, faster stride, airborne boost, fixed camera and effect cleanup.');

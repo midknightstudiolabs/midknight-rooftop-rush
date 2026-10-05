@@ -23,5 +23,5 @@ export class Nitro {
  press(){if(this.fuel<5)return false;this.held=true;return true;}
  release(){this.held=false;this.active=false;}
  collect(amount=4){this.fuel=Math.min(100,this.fuel+amount);}
- step(dt,grounded){this.active=this.held&&grounded&&this.fuel>0;if(this.active){this.fuel=Math.max(0,this.fuel-dt*28);if(this.fuel===0)this.release();}else if(!this.held)this.fuel=Math.min(100,this.fuel+dt*2);}
+ step(dt){this.active=this.held&&this.fuel>0;if(this.active){this.fuel=Math.max(0,this.fuel-dt*28);if(this.fuel===0)this.release();}else if(!this.held)this.fuel=Math.min(100,this.fuel+dt*2);}
 }

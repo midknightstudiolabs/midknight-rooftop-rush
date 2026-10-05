@@ -27,3 +27,5 @@
 .steerControls{position:absolute;bottom:24px;right:5.5%;display:flex;gap:10px;z-index:6}.steerControls button{display:grid;place-content:center;gap:2px;width:60px;height:52px;border-radius:14px;border:1px solid #aa97796b;background:#211c2beb;font-size:23px;touch-action:manipulation}.steerControls small{font-size:8px;letter-spacing:1px}.steerControls button:active{transform:none;background:#55432d}
 @media(max-width:600px){.steerControls{right:6%;bottom:24px;gap:8px}.steerControls button{width:54px}#toast{top:175px;font-size:10px;max-width:72%}}
 @media(max-height:650px){#toast{top:70px}.steerControls{bottom:8px}.steerControls button{height:42px}}
+
+.nitro.active b{font-size:10px;letter-spacing:.5px}

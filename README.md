@@ -1,6 +1,6 @@
 # Midknight Rooftop Rush
 
-A browser playtest starring Midknight, a fluffy black tuxedo cat, exploring a reactive moonlit rooftop district. Version 0.12 adds gentle left/right roof bends, a slower default pace, explicit steering buttons and a dimmer, stationary skyline.
+A browser playtest starring Midknight, a fluffy black tuxedo cat, exploring a reactive moonlit rooftop district. Version 0.13 adds Speedster Nitro: a slow-motion world, faster paws, responsive steering and a restrained gold trail.
 
 **[Play in your browser](https://midknightstudiolabs.github.io/midknight-rooftop-rush/)**
 
@@ -35,7 +35,8 @@ Open http://127.0.0.1:4173. There are no dependencies to install. For the automa
 - A stationary skyline and camera, with local curved roof geometry instead of world bending, camera bob, jump tracking or Rush zoom. The viewport is fitted once on resize to keep all lanes visible on phones.
 - Baseline pace starts at 12 m/s and gradually caps at 16 m/s. Broad bends move the roof centerline at most 1.1 m; camera rotation and FOV never follow them. Geometry, steering, pickups and gap support share the same route coordinates. Distant buildings are stationary, dimmer and drawn in batches; repeated floor stripes and passing lamps are removed.
 - Hard collisions stop the world immediately, squash Midknight into a flat liquid-cat pose, then show the restart screen. Rush, shields and pounces cannot pass through solid obstacles.
-- Manual Nitro adds up to 4 m/s with gradual acceleration and deceleration. Fuel starts at 60%, refills from gold and tricks, and drains only while boosting on a roof. Airborne speed stays steady for predictable landings. The camera and FOV remain fixed.
+- Manual Nitro adds up to 4 m/s with gradual acceleration and deceleration. Fuel starts at 60%, refills from gold and tricks, and drains at 28% per real second on roofs and in the air. Airborne speed stays steady for predictable landings. The camera and FOV remain fixed.
+- Speedster eases the world to 38% time while increasing the cat’s stride rate by up to 55%. Moving hazards, smoke, particles, route travel and vertical physics use the same clock to preserve landing distances. Steering and fuel use real time. Release eases the world back to normal; pause, crashes and restart clear the effect. Short gold ribbons accompany the cat without flashes, zoom or screen effects.
 - Eight encounter types: chimney smoke, three-way pounce forks, opening shutters, pigeon-triggered falling pots, crumbling roof tiles, laundry lines, rival races and raised shortcuts.
 - Route choices happen through steering and jumping, without a landing dialog or automatic slowdown.
 - Split skybridges, missing roof sections, offset connections and narrow center bridges create physical route choices. Full-width junctions let players change paths between splits. Walking into a gap causes a fall; a clear lit roof remains reachable.
