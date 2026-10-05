@@ -13,7 +13,7 @@ export const pathX = () => 0;
 export const pathSlope = () => 0;
 export const bendAt = () => 0;
 export function pounceVelocity(y,targetY,seconds){return (targetY-y+13*seconds*seconds)/seconds;}
-export function rampVelocity(speed,y=0,top=2.76){return pounceVelocity(y,top,Math.max(.65,Math.min(1.2,20/speed)));}
+export function rampVelocity(speed,y=0,top=2.76){return pounceVelocity(y,top,Math.max(.65,Math.min(1.7,20/speed)));}
 export function smokeStage(seconds){return seconds<.65?'warning':seconds<2.4?'burst':'clear';}
 export class EncounterDirector {
  constructor(seed=729){this.seed=seed;this.reset();}

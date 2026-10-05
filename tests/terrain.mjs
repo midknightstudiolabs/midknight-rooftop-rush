@@ -9,3 +9,21 @@ const jumper=new CatPhysics();jumper.requestJump();for(let i=0;i<12;i++)jumper.s
 const nitro=new Nitro();nitro.collect(100);nitro.step(1,true);assert.equal(nitro.active,false,'full fuel never auto-activates');assert.ok(nitro.press());nitro.step(1,true);assert.equal(nitro.fuel,72);assert.equal(nitro.active,true);nitro.release();nitro.step(.5,true);assert.equal(nitro.active,false);assert.ok(nitro.fuel>72);nitro.press();const fuel=nitro.fuel;nitro.step(.5,false);assert.equal(nitro.active,false);assert.equal(nitro.fuel,fuel,'airtime conserves fuel');nitro.step(10,true);assert.equal(nitro.fuel,0);assert.equal(nitro.held,false);assert.equal(nitro.press(),false);nitro.collect();assert.equal(nitro.active,false);nitro.reset();assert.equal(nitro.fuel,60);
 for(let i=0;i<100;i++){roof.schedule(i*235+140,i%2?1:-1);roof.prune(i*235);}assert.ok(roof.sections.size<40,'old terrain plans expire');
 console.log('PASS: split roofs, continuous alternate routes, true gaps, jumping, no underside teleport, manual fuel and depletion.');
+
+// A bend must carry the cat and its support together, with no sudden turn.
+for(const side of [-1,1])for(const speed of [12,16,20]){
+ const layout=new RoofLayout(),first=layout.schedule(144,side),start=(first-1)*12;
+ assert.equal(layout.offsetAt(start),0);assert.equal(layout.offsetAt(start+84),0);
+ assert.ok(Math.abs(layout.offsetAt(start+42)-side*1.1)<1e-9);
+ const p=new CatPhysics();p.lane=1;p.x=2.8;let last=0,maxVelocity=0;
+ for(let d=start-2;d<start+86;d+=speed*STEP){
+  const offset=layout.offsetAt(d);assert.ok(Math.abs(offset-last)<.012,'bounded lateral motion at full Nitro');last=offset;
+  // Follow one lane without forcing its map gaps into this steering test.
+  p.step(STEP,[],true,offset);maxVelocity=Math.max(maxVelocity,Math.abs(p.vx));
+  assert.ok(Math.abs(p.x-(2.8+offset))<.2,'cat stays centered on a curved lane');
+  for(const lane of layout.lanes(layout.indexAt(d)))assert.ok(layout.supported(d,lane*2.8+offset));
+ }
+ assert.ok(maxVelocity<1.2,'bends do not whip the player sideways');
+}
+assert.ok(roof.bends.length<4,'old bend plans expire');
+console.log('PASS: left/right bends, smooth entry/exit, support alignment and bounded lateral speed at 12–20 m/s.');

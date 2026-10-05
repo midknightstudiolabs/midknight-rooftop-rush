@@ -33,11 +33,11 @@ for(const crouch of [false,true]){const h=harness();h.physics.x=-2.8;h.physics.l
 // Pigeons only cause the falling-pot hazard when actually startled.
 {const h=harness();h.physics.x=-2.8;h.physics.lane=-1;h.a.buildEncounter('pigeons');h.tick(6.3);assert.ok(h.messages.some(s=>s.includes('FEATHER EFFECT')));assert.ok(h.hits>0);}
 // Forks are traversed by steering onto ramps, without any modal or time stop.
-for(const speed of [16,22,28])for(const lane of [-1,0,1]){const h=harness();h.state.speed=speed;h.physics.x=lane*2.8;h.physics.lane=lane;h.a.buildEncounter('fork');h.tick(9);assert.equal(h.hits,0,'fork ramp at '+speed+' lane '+lane);if(lane!==0)assert.ok(h.rewards.length>0);}
+for(const speed of [12,16,20,28])for(const lane of [-1,0,1]){const h=harness();h.state.speed=speed;h.physics.x=lane*2.8;h.physics.lane=lane;h.a.buildEncounter('fork');h.tick(9);assert.equal(h.hits,0,'fork ramp at '+speed+' lane '+lane);if(lane!==0)assert.ok(h.rewards.length>0);}
 // High routes are reachable from their ramp at the entire speed range.
-for(const kind of ['collapse','laundry','corner'])for(const speed of [16,25,40]){const h=harness();h.state.speed=speed;h.physics.x=-2.8;h.physics.lane=-1;h.a.buildEncounter(kind);h.tick(9);assert.equal(h.hits,0,kind+' ramp remains fair at '+speed);assert.ok(h.rewards.length>0,kind+' traversal gives a reward at '+speed);}
+for(const kind of ['collapse','laundry','corner'])for(const speed of [12,16,20,40]){const h=harness();h.state.speed=speed;h.physics.x=-2.8;h.physics.lane=-1;h.a.buildEncounter(kind);h.tick(9);assert.equal(h.hits,0,kind+' ramp remains fair at '+speed);assert.ok(h.rewards.length>0,kind+' traversal gives a reward at '+speed);}
 // Race resolves in either direction, and restart removes every temporary prop.
 for(const win of [false,true]){const h=harness();h.a.buildEncounter('rival');h.tick(4.2);if(win)h.state.styleScore+=650;h.tick(10);assert.equal(h.rewards.includes('RIVAL OUTSMARTED'),win);h.a.reset();assert.equal(h.a.snapshot().actors,0);assert.equal(h.a.snapshot().platforms,0);assert.equal(h.a.snapshot().racing,false);}
 // Long sessions recycle actors and platforms instead of accumulating a city forever.
 {const h=harness(true);h.state.rush=10000;h.state.speed=40;for(let i=0;i<900;i++){h.tick(.1);const s=h.a.snapshot();assert.ok(s.actors<20&&s.platforms<8&&s.clouds<=28);}assert.ok(h.a.snapshot().encounters>10);}
-console.log('PASS: all eight encounters, safe routes, reactive smoke/shutters/pigeons, continuous forks, high routes at 16–40 m/s, race win/loss and bounded cleanup.');
+console.log('PASS: all eight encounters, safe routes, reactive smoke/shutters/pigeons, continuous forks, high routes at 12–40 m/s, race win/loss and bounded cleanup.');

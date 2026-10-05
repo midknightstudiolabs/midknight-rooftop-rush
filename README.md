@@ -1,6 +1,6 @@
 # Midknight Rooftop Rush
 
-A browser playtest starring Midknight, a fluffy black tuxedo cat, exploring a reactive moonlit rooftop district. Version 0.11 adds manual Nitro and split skybridges with physical gaps, and removes the landing-choice dialog.
+A browser playtest starring Midknight, a fluffy black tuxedo cat, exploring a reactive moonlit rooftop district. Version 0.12 adds gentle left/right roof bends, a slower default pace, explicit steering buttons and a dimmer, stationary skyline.
 
 **[Play in your browser](https://midknightstudiolabs.github.io/midknight-rooftop-rush/)**
 
@@ -10,7 +10,7 @@ No installation, account or API key is needed to play. Desktop keyboard and mobi
 
 | Action | Keyboard | Touch |
 | --- | --- | --- |
-| Move | Left/right arrows or A/D | Swipe left/right |
+| Move | Left/right arrows or A/D | Swipe left/right or Left/Right buttons |
 | Jump | Space, Up or W; release for a short hop | Swipe up or tap |
 | Crouch / fast drop | Down or S | Swipe down |
 | Moon Pounce | Jump again in the air, Shift or E | Pounce button |
@@ -32,9 +32,10 @@ Open http://127.0.0.1:4173. There are no dependencies to install. For the automa
 
 ## What this build includes
 
-- A stationary skyline and camera, with no world bending, camera bob, jump tracking or Rush zoom. The viewport is fitted once on resize to keep all lanes visible on phones.
+- A stationary skyline and camera, with local curved roof geometry instead of world bending, camera bob, jump tracking or Rush zoom. The viewport is fitted once on resize to keep all lanes visible on phones.
+- Baseline pace starts at 12 m/s and gradually caps at 16 m/s. Broad bends move the roof centerline at most 1.1 m; camera rotation and FOV never follow them. Geometry, steering, pickups and gap support share the same route coordinates. Distant buildings are stationary, dimmer and drawn in batches; repeated floor stripes and passing lamps are removed.
 - Hard collisions stop the world immediately, squash Midknight into a flat liquid-cat pose, then show the restart screen. Rush, shields and pounces cannot pass through solid obstacles.
-- Manual Nitro adds up to 6 m/s with gradual acceleration and deceleration. Fuel starts at 60%, refills from gold and tricks, and drains only while boosting on a roof. Airborne speed stays steady for predictable landings. The camera and FOV remain fixed.
+- Manual Nitro adds up to 4 m/s with gradual acceleration and deceleration. Fuel starts at 60%, refills from gold and tricks, and drains only while boosting on a roof. Airborne speed stays steady for predictable landings. The camera and FOV remain fixed.
 - Eight encounter types: chimney smoke, three-way pounce forks, opening shutters, pigeon-triggered falling pots, crumbling roof tiles, laundry lines, rival races and raised shortcuts.
 - Route choices happen through steering and jumping, without a landing dialog or automatic slowdown.
 - Split skybridges, missing roof sections, offset connections and narrow center bridges create physical route choices. Full-width junctions let players change paths between splits. Walking into a gap causes a fall; a clear lit roof remains reachable.
@@ -52,7 +53,7 @@ Open http://127.0.0.1:4173. There are no dependencies to install. For the automa
 
 This is a stylized browser prototype using animated sprites in a 3D environment, not a fully rigged AAA production character. Sprite pose blending and rear-only perspective remain limitations. The body has two clearly visible hind paws; forepaws are mostly occluded from this camera angle.
 
-Automated gameplay, spring-motion, encounter and terrain checks pass. Tests cover continuous route traversal, roof gaps and jumps, manual Nitro input and depletion, safe release on pause, fork ramps across the current 16–28 m/s speed range, hard-impact stops and fixed camera framing. Browser automation was blocked by a local permission-check failure during development, so GPU rendering and visual playtesting across devices remain unverified. Please report animation artifacts, clipping, collision problems and performance issues through this repository's Issues tab, with device/browser details and a short recording if possible.
+Automated gameplay, spring-motion, encounter and terrain checks pass. Tests cover continuous route traversal, roof gaps and jumps, manual Nitro input and depletion, safe release on pause, fork ramps across the current 12–20 m/s speed range, hard-impact stops and fixed camera framing. Browser automation was blocked by a local permission-check failure during development, so GPU rendering and visual playtesting across devices remain unverified. Please report animation artifacts, clipping, collision problems and performance issues through this repository's Issues tab, with device/browser details and a short recording if possible.
 
 The `.openai` hosting configuration, private source history, credentials and unrelated workspace files are intentionally absent from this public export.
 

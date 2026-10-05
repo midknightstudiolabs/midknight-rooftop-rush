@@ -1,5 +1,5 @@
 import {RoofLayout,Nitro} from '../terrain.js';
-import {curveMaterial,createAdventure} from '../adventure.js';import {bendAt,rampVelocity} from '../rooftops.js';
+import {curveMaterial,createAdventure} from '../adventure.js';import {bendAt,rampVelocity,pounceVelocity} from '../rooftops.js';
 import fs from 'node:fs';import assert from 'node:assert/strict';import vm from 'node:vm';import * as Three from '../three.module.js';import {CatPhysics,PHYSICS,STEP,sweptOverlap} from '../physics.js';import {createMidknight as createSprite} from '../character-sprite.js';
 const createMidknight=(options={})=>createSprite({...options,loader:{loadAsync:async()=>new Three.Texture()}});
 const simulate=(p,seconds,surfaces=[])=>{for(let i=0;i<Math.round(seconds/STEP);i++)p.step(STEP,surfaces);};
@@ -14,7 +14,7 @@ const spring=new CatPhysics();spring.move(1);spring.step(STEP);assert.ok(spring.
 const elements=new Map(),registered=new Map();const element=id=>{if(!elements.has(id))elements.set(id,{style:{},classList:{add(){},remove(){},toggle(){}},addEventListener(name,fn){this.handlers??=new Map();this.handlers.set(name,fn);},setAttribute(){},hidden:false,textContent:'',showModal(){this.open=true},close(){this.open=false},setPointerCapture(){}});return elements.get(id);};
 globalThis.document={getElementById:element};
 const inputHandlers=new Map();
-const ctx={RoofLayout,Nitro,curveMaterial,createAdventure:(api)=>createAdventure({...api,avatarFactory:createMidknight}),bendAt,rampVelocity,THREE:{...Three,WebGLRenderer:class{setPixelRatio(){}setSize(){}render(){}}},CatPhysics,STEP,sweptOverlap,createMidknight,document:{getElementById:element,body:element('body'),addEventListener(){},modelContext:{registerTool(t){registered.set(t.name,t)}}},localStorage:{getItem(){return '0'},setItem(){}},window:{},innerWidth:1440,innerHeight:900,devicePixelRatio:1,requestAnimationFrame(){},addEventListener(name,fn){inputHandlers.set(name,fn)},performance,console,Math,AbortController,Error};
+const ctx={RoofLayout,Nitro,curveMaterial,createAdventure:(api)=>createAdventure({...api,avatarFactory:createMidknight}),bendAt,rampVelocity,pounceVelocity,THREE:{...Three,WebGLRenderer:class{setPixelRatio(){}setSize(){}render(){}}},CatPhysics,STEP,sweptOverlap,createMidknight,document:{getElementById:element,body:element('body'),addEventListener(){},modelContext:{registerTool(t){registered.set(t.name,t)}}},localStorage:{getItem(){return '0'},setItem(){}},window:{},innerWidth:1440,innerHeight:900,devicePixelRatio:1,requestAnimationFrame(){},addEventListener(name,fn){inputHandlers.set(name,fn)},performance,console,Math,AbortController,Error};
 const source=fs.readFileSync(new URL('../game.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'');vm.createContext(ctx);vm.runInContext(source,ctx);const run=code=>vm.runInContext(code,ctx);const reset=()=>run('sound=false;start();spawnClock=999;invincible=0;');
 await run('avatar.loaded');
 reset();run("createObject('barrier',0,-.1);update(STEP);");assert.equal(run('lives'),0);assert.equal(run('mode'),'splat');const crashDistance=run('distance');run('update(STEP)');assert.equal(run('distance'),crashDistance);
@@ -58,7 +58,7 @@ run('update(STEP)');assert.ok(Math.abs(run('scene.background.r')-initialLight)<.
 console.log('PASS: physics, jump height/buffering/coyote time, pounce limits, rooftop landings, spring lanes, swept collisions, shields/rush, ramp speeds, combos/gates/healing, pause/restart, structured controls, texture readiness/failure, eight-frame stride, loop duration, air/crouch/landing blends and paw alignment.');
 
 // Course generation, roof visibility and player collisions share one terrain map.
-reset();run("for(let i=0;i<35000;i++){const city=adventure.snapshot(),now=terrain.lanes(terrain.indexAt(distance)),ahead=terrain.lanes(terrain.indexAt(distance+8)),safe=now.filter(l=>ahead.includes(l));const preferred=['chimney','shutters'].includes(city.encounter)?-city.hazardLane:0;physics.lane=safe.includes(preferred)?preferred:safe[0];update(STEP);}");
+reset();run("for(let i=0;i<50000;i++){const city=adventure.snapshot(),now=terrain.lanes(terrain.indexAt(distance)),ahead=terrain.lanes(terrain.indexAt(distance+8)),safe=now.filter(l=>ahead.includes(l));const preferred=['chimney','shutters'].includes(city.encounter)?-city.hazardLane:0;physics.lane=safe.includes(preferred)?preferred:safe[0];update(STEP);}");
 assert.equal(run('mode'),'running',JSON.stringify(run('({distance,y:physics.y,lane:physics.lane,city:adventure.snapshot()})')));assert.ok(run('adventure.snapshot().encounters')>16);assert.ok(run('objects.length')<100);
 reset();run("adventure.buildEncounter('fork');moonPounce();");assert.equal(run('mode'),'running');assert.equal(run('physics.moon'),2);assert.equal(run('motionScale'),1);
 inputHandlers.get('keydown')({code:'KeyN',repeat:false,preventDefault(){}});assert.equal(run('nitro.held'),true);inputHandlers.get('keyup')({code:'KeyN'});assert.equal(run('nitro.held'),false);
@@ -84,11 +84,23 @@ console.log('PASS: solid-impact stop, liquid splat, frozen world, input lock, sa
 // A fixed camera still needs to show both outer lanes on tall phone screens.
 ctx.innerWidth=390;ctx.innerHeight=844;inputHandlers.get('resize')();
 run('camera.updateMatrixWorld(true);');
-for(const x of [-4.6,4.6])assert.ok(Math.abs(run(`new THREE.Vector3(${x},1.5,0).project(camera).x`))<1,'outer lane fits portrait viewport');
+for(const x of [-5.7,5.7])assert.ok(Math.abs(run(`new THREE.Vector3(${x},1.5,0).project(camera).x`))<1,'outer lane fits portrait viewport');
 ctx.innerWidth=1440;ctx.innerHeight=900;inputHandlers.get('resize')();run('camera.updateMatrixWorld(true);');
 assert.ok(run('new THREE.Vector3(0,10.5,0).project(camera).y')<1,'high pounce fits without moving the camera');
 
-reset();run('nitro.press();for(let i=0;i<100;i++)update(STEP);');assert.ok(run('speed')>19&&run('speed')<23,'boost accelerates smoothly');const boostSpeed=run('speed');run('nitro.release();for(let i=0;i<100;i++)update(STEP);');assert.ok(run('speed')<boostSpeed,'release eases back to normal speed');
+reset();run('nitro.press();for(let i=0;i<100;i++)update(STEP);');assert.ok(run('speed')>14&&run('speed')<16,'boost accelerates smoothly');const boostSpeed=run('speed');run('nitro.release();for(let i=0;i<100;i++)update(STEP);');assert.ok(run('speed')<boostSpeed,'release eases back to normal speed');
 const boostButton=element('nitroBtn');boostButton.handlers.get('pointerdown')({preventDefault(){},pointerId:4});assert.equal(run('nitro.held'),true);boostButton.handlers.get('pointercancel')();assert.equal(run('nitro.held'),false);boostButton.handlers.get('pointerdown')({preventDefault(){},pointerId:5});inputHandlers.get('blur')();assert.equal(run('mode'),'paused');assert.equal(run('nitro.held'),false);
 assert.ok(!fs.readFileSync(new URL('../index.html',import.meta.url),'utf8').includes('id="aimPanel"'),'landing dialog is removed from the page');
 console.log('PASS: Nitro acceleration/release, touch cancellation, focus-loss pause and no landing dialog.');
+
+reset();element('leftBtn').onclick();assert.equal(run('physics.lane'),-1);element('rightBtn').onclick();assert.equal(run('physics.lane'),0);
+run('pause();');element('leftBtn').onclick();assert.equal(run('physics.lane'),0);assert.equal(element('steerControls').hidden,true);
+reset();run('terrain.schedule(144,1);syncRoofs();');
+assert.ok(run(`roofSections.every(g=>g.userData.lanes.every(p=>p.children.every(m=>{
+ const a=m.geometry.attributes.position,rest=m.userData.rest;
+ for(let v=0;v<a.count;v++){const d=g.userData.index*12-6-(rest[v*3+2]*m.scale.z+m.position.z);if(Math.abs((a.getX(v)-rest[v*3])*m.scale.x-terrain.offsetAt(d))>1e-5)return false;}return true;
+})))`),'rendered roof vertices match the support map');
+run("distance=180;const o=createObject('coin',1,-6);globalThis.coinX=o.mesh.position.x;");assert.ok(Math.abs(ctx.coinX-(2.8+run('terrain.offsetAt(186)')))<1e-9,'gold stays on the bend');
+reset();const skyline=run('scenery.map(g=>g.position.toArray().join()).join()');run('for(let i=0;i<120;i++)update(STEP);');assert.equal(run('scenery.map(g=>g.position.toArray().join()).join()'),skyline,'distant skyline is stationary');
+assert.ok(run('skylineBatches.size')<12,'skyline uses a small number of material batches');
+console.log('PASS: steering buttons, curved roof geometry, pickup alignment and stationary batched skyline.');

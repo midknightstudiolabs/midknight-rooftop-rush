@@ -10,10 +10,10 @@ export class CatPhysics {
   pounce(){if(this.moon<1||this.airPounced)return false;this.moon--;this.regen=0;this.secondary.kick(PHYSICS.pounceSpeed-this.vy);this.vy=PHYSICS.pounceSpeed;this.grounded=false;this.coyote=0;this.phase=.65;this.airPounced=true;this.slide=0;this.jumpBuffer=0;this.anticipation=0;return true;}
   duck(){this.slide=.8;this.jumpBuffer=0;if(!this.grounded){const next=Math.min(this.vy,-12);this.secondary.kick(next-this.vy);this.vy=next;}}
   launch(velocity){this.secondary.kick(velocity-this.vy);this.vy=velocity;this.grounded=false;this.coyote=0;this.slide=0;this.jumpBuffer=0;this.anticipation=0;}
-  step(dt,surfaces=[],baseSupported=true){
+  step(dt,surfaces=[],baseSupported=true,pathOffset=0){
     this.landed=false;this.previousY=this.y;this.phase=Math.max(0,this.phase-dt);this.slide=Math.max(0,this.slide-dt);this.landing=Math.max(0,this.landing-dt*4.5);this.jumpBuffer=Math.max(0,this.jumpBuffer-dt);
     // Critically damped lateral spring: acceleration, braking and no lane teleport.
-    const ax=(this.lane*PHYSICS.laneWidth-this.x)*190-this.vx*27;
+    const ax=(pathOffset+this.lane*PHYSICS.laneWidth-this.x)*190-this.vx*27;
     this.vx+=ax*dt;this.x+=this.vx*dt;
     const supported=surfaces.some(s=>Math.abs(this.x-s.x)<s.halfWidth+.2&&Math.abs(s.z)<s.halfLength+.28&&Math.abs(this.y-s.top)<.035);
     if(this.grounded&&!supported&&(this.y>.04||!baseSupported)){this.grounded=false;this.coyote=PHYSICS.coyote;}
