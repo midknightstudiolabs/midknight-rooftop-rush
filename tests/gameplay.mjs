@@ -1,3 +1,4 @@
+import {RoofLayout,Nitro} from '../terrain.js';
 import {curveMaterial,createAdventure} from '../adventure.js';import {bendAt,rampVelocity} from '../rooftops.js';
 import fs from 'node:fs';import assert from 'node:assert/strict';import vm from 'node:vm';import * as Three from '../three.module.js';import {CatPhysics,PHYSICS,STEP,sweptOverlap} from '../physics.js';import {createMidknight as createSprite} from '../character-sprite.js';
 const createMidknight=(options={})=>createSprite({...options,loader:{loadAsync:async()=>new Three.Texture()}});
@@ -10,17 +11,17 @@ const buffered=new CatPhysics();buffered.moon=0;buffered.y=.15;buffered.vy=-2;bu
 const roof=new CatPhysics();roof.y=4;roof.vy=-3;roof.grounded=false;const platforms=[{x:0,z:0,halfWidth:1.2,halfLength:4,top:2.76}];simulate(roof,.5,platforms);assert.equal(roof.y,2.76);assert.equal(roof.grounded,true);simulate(roof,.6,[]);assert.equal(roof.y,0,'walk off roof and fall naturally');
 const regen=new CatPhysics();regen.moon=0;simulate(regen,27.1);assert.equal(regen.moon,3);
 const spring=new CatPhysics();spring.move(1);spring.step(STEP);assert.ok(spring.x>0&&spring.x<.1);simulate(spring,1);assert.ok(Math.abs(spring.x-2.8)<.01);spring.move(1);assert.equal(spring.lane,1);assert.ok(sweptOverlap(-20,20,.4));assert.equal(sweptOverlap(-20,-10,.4),false);
-const elements=new Map(),registered=new Map();const element=id=>{if(!elements.has(id))elements.set(id,{style:{},classList:{add(){},remove(){},toggle(){}},addEventListener(){},setAttribute(){},hidden:false,textContent:'',showModal(){this.open=true},close(){this.open=false},setPointerCapture(){}});return elements.get(id);};
+const elements=new Map(),registered=new Map();const element=id=>{if(!elements.has(id))elements.set(id,{style:{},classList:{add(){},remove(){},toggle(){}},addEventListener(name,fn){this.handlers??=new Map();this.handlers.set(name,fn);},setAttribute(){},hidden:false,textContent:'',showModal(){this.open=true},close(){this.open=false},setPointerCapture(){}});return elements.get(id);};
 globalThis.document={getElementById:element};
 const inputHandlers=new Map();
-const ctx={curveMaterial,createAdventure:(api)=>createAdventure({...api,avatarFactory:createMidknight}),bendAt,rampVelocity,THREE:{...Three,WebGLRenderer:class{setPixelRatio(){}setSize(){}render(){}}},CatPhysics,STEP,sweptOverlap,createMidknight,document:{getElementById:element,body:element('body'),addEventListener(){},modelContext:{registerTool(t){registered.set(t.name,t)}}},localStorage:{getItem(){return '0'},setItem(){}},window:{},innerWidth:1440,innerHeight:900,devicePixelRatio:1,requestAnimationFrame(){},addEventListener(name,fn){inputHandlers.set(name,fn)},performance,console,Math,AbortController,Error};
+const ctx={RoofLayout,Nitro,curveMaterial,createAdventure:(api)=>createAdventure({...api,avatarFactory:createMidknight}),bendAt,rampVelocity,THREE:{...Three,WebGLRenderer:class{setPixelRatio(){}setSize(){}render(){}}},CatPhysics,STEP,sweptOverlap,createMidknight,document:{getElementById:element,body:element('body'),addEventListener(){},modelContext:{registerTool(t){registered.set(t.name,t)}}},localStorage:{getItem(){return '0'},setItem(){}},window:{},innerWidth:1440,innerHeight:900,devicePixelRatio:1,requestAnimationFrame(){},addEventListener(name,fn){inputHandlers.set(name,fn)},performance,console,Math,AbortController,Error};
 const source=fs.readFileSync(new URL('../game.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'');vm.createContext(ctx);vm.runInContext(source,ctx);const run=code=>vm.runInContext(code,ctx);const reset=()=>run('sound=false;start();spawnClock=999;invincible=0;');
 await run('avatar.loaded');
 reset();run("createObject('barrier',0,-.1);update(STEP);");assert.equal(run('lives'),0);assert.equal(run('mode'),'splat');const crashDistance=run('distance');run('update(STEP)');assert.equal(run('distance'),crashDistance);
 reset();run("duck();for(let i=0;i<30;i++)update(STEP);createObject('overhead',0,-.1);for(let i=0;i<10;i++)update(STEP);");assert.equal(run('lives'),3);assert.equal(run('tricks'),1);assert.equal(run('combo'),1);
 reset();run("shield=5;createObject('penthouse',0,-.1);update(STEP);");assert.equal(run('mode'),'splat');assert.equal(run('shield'),0);
 reset();run('shield=5;hit(false);');assert.equal(run('lives'),3);assert.equal(run('shield'),0);
-reset();run("for(let i=0;i<20;i++){createObject('coin',0,-.1);update(STEP);}");assert.equal(run('coins'),20);assert.ok(run('rush')>6);run("createObject('penthouse',0,-.1);update(STEP);");assert.equal(run('mode'),'splat');
+reset();run("for(let i=0;i<20;i++){createObject('coin',0,-.1);update(STEP);}");assert.equal(run('coins'),20);assert.equal(run('nitro.fuel'),100);assert.equal(run('nitro.active'),false);run('nitro.press();update(STEP);');assert.ok(run('nitro.active'));run("createObject('penthouse',0,-.1);update(STEP);");assert.equal(run('mode'),'splat');
 for(const meters of [0,2700]){reset();run(`distance=${meters};speed=16+Math.min(distance/180,15);createObject('penthouse',0,-20);createObject('ramp',0,-6);for(let i=0;i<360;i++)update(STEP);`);assert.equal(run('lives'),3,`penthouse ramp at ${meters} m`);}
 reset();run("createObject('roof',0,-28);createObject('ramp',0,-7);for(let i=0;i<450;i++)update(STEP);");assert.equal(run('lives'),3,'long rooftop is safe');assert.ok(run('tricks')>=1);
 reset();run("physics.pounce();createObject('barrier',0,-.1);for(let i=0;i<15;i++)update(STEP);");assert.equal(run('mode'),'splat');assert.equal(run('tricks'),0,'solid objects stop Moon Pounce too');
@@ -48,7 +49,7 @@ assert.ok(u.poseWeights.value.x+u.poseWeights.value.y+u.poseWeights.value.z<=1.0
 anim.reset();avatar.reset();for(let i=0;i<120;i++){anim.vx=i<60?18:-18;avatar.animate(1/120,anim,31,i/120);const q=mesh.parent.quaternion.clone();q.premultiply(camera.quaternion.clone().invert());assert.ok(Math.abs(new Three.Euler().setFromQuaternion(q).z)<.0251,'turning lean remains small');}
 avatar.dispose();
 // Regression: roof shell and bridge surfaces must not compete at one depth.
-assert.ok(run('roofSections.every(g=>{const shell=g.children[0],deck=g.children[1];return shell.position.y+shell.scale.y/2 < deck.position.y+deck.scale.y/2-.1;})'));
+assert.ok(run('roofSections.every(g=>g.userData.lanes.every(p=>{const shell=p.children[0],deck=p.children[1];return shell.position.y+shell.scale.y/2 < deck.position.y+deck.scale.y/2-.1;}))'));
 assert.ok(run('roofSections.every(g=>g.children.filter(o=>o.material===mats.rail).every(o=>o.position.y+o.scale.y/2>.01))'));
 reset();for(let i=0;i<120;i++){run('frame(last+1000/60)');assert.equal(run('cat.visible'),true,'invulnerability never blinks the cat');}
 reset();run("gates=2;collectGate({mesh:{position:new THREE.Vector3()}})");const initialLight=run('scene.background.r');
@@ -56,22 +57,14 @@ assert.ok(Math.abs(initialLight-run('districtTint.r'))>.001,'district effect sta
 run('update(STEP)');assert.ok(Math.abs(run('scene.background.r')-initialLight)<.002,'district light fades gradually');
 console.log('PASS: physics, jump height/buffering/coyote time, pounce limits, rooftop landings, spring lanes, swept collisions, shields/rush, ramp speeds, combos/gates/healing, pause/restart, structured controls, texture readiness/failure, eight-frame stride, loop duration, air/crouch/landing blends and paw alignment.');
 
-// Exercise the actual game loop across multiple full encounter decks.
-reset();run("for(let i=0;i<20000;i++){const city=adventure.snapshot();physics.lane=['chimney','shutters'].includes(city.encounter)?-city.hazardLane:0;update(STEP);}");
-assert.equal(run('mode'),'running');assert.ok(run('adventure.snapshot().encounters')>16);
-assert.ok(run('objects.length')<100,'encounter collectibles are recycled');
-assert.ok(run('adventure.snapshot().platforms')<8);
-reset();run("adventure.buildEncounter('fork');for(let i=0;i<900&&!adventure.readyToAim;i++){invincible=100;update(STEP);}moonPounce();");
-assert.ok(run('adventure.aiming'));const aimDistance=run('distance');
-run('pause();for(let i=0;i<12;i++)frame(last+1000/60);');assert.equal(run('distance'),aimDistance);
-run('pause();');inputHandlers.get('keydown')({code:'ArrowRight',repeat:false,preventDefault(){}});
-assert.equal(run('adventure.snapshot().selectedLane'),1);inputHandlers.get('keyup')({code:'ShiftLeft'});
-assert.equal(run('adventure.aiming'),false);assert.equal(run('physics.moon'),2);
-run('home();start();');assert.equal(run('adventure.snapshot().encounters'),0);assert.equal(run('adventure.snapshot().aiming'),false);
-console.log('PASS: extended live-loop integration, aim keyboard selection/release, pause during aiming and clean restart.');
-
-
-
+// Course generation, roof visibility and player collisions share one terrain map.
+reset();run("for(let i=0;i<35000;i++){const city=adventure.snapshot(),now=terrain.lanes(terrain.indexAt(distance)),ahead=terrain.lanes(terrain.indexAt(distance+8)),safe=now.filter(l=>ahead.includes(l));const preferred=['chimney','shutters'].includes(city.encounter)?-city.hazardLane:0;physics.lane=safe.includes(preferred)?preferred:safe[0];update(STEP);}");
+assert.equal(run('mode'),'running',JSON.stringify(run('({distance,y:physics.y,lane:physics.lane,city:adventure.snapshot()})')));assert.ok(run('adventure.snapshot().encounters')>16);assert.ok(run('objects.length')<100);
+reset();run("adventure.buildEncounter('fork');moonPounce();");assert.equal(run('mode'),'running');assert.equal(run('physics.moon'),2);assert.equal(run('motionScale'),1);
+inputHandlers.get('keydown')({code:'KeyN',repeat:false,preventDefault(){}});assert.equal(run('nitro.held'),true);inputHandlers.get('keyup')({code:'KeyN'});assert.equal(run('nitro.held'),false);
+run('nitro.press();pause();');assert.equal(run('nitro.held'),false);const stoppedAt=run('distance');run('update(STEP)');assert.equal(run('distance'),stoppedAt);run('pause();');
+run('home();start();');assert.equal(run('nitro.fuel'),60);assert.equal(run('nitro.held'),false);
+console.log('PASS: continuous route selection, Nitro key press/release, pause safety and reset.');
 
 // A crash freezes every world object, rejects movement and preserves the impact spot.
 reset();run("createObject('barrier',0,-2);while(mode==='running')update(STEP);");
@@ -94,3 +87,8 @@ run('camera.updateMatrixWorld(true);');
 for(const x of [-4.6,4.6])assert.ok(Math.abs(run(`new THREE.Vector3(${x},1.5,0).project(camera).x`))<1,'outer lane fits portrait viewport');
 ctx.innerWidth=1440;ctx.innerHeight=900;inputHandlers.get('resize')();run('camera.updateMatrixWorld(true);');
 assert.ok(run('new THREE.Vector3(0,10.5,0).project(camera).y')<1,'high pounce fits without moving the camera');
+
+reset();run('nitro.press();for(let i=0;i<100;i++)update(STEP);');assert.ok(run('speed')>19&&run('speed')<23,'boost accelerates smoothly');const boostSpeed=run('speed');run('nitro.release();for(let i=0;i<100;i++)update(STEP);');assert.ok(run('speed')<boostSpeed,'release eases back to normal speed');
+const boostButton=element('nitroBtn');boostButton.handlers.get('pointerdown')({preventDefault(){},pointerId:4});assert.equal(run('nitro.held'),true);boostButton.handlers.get('pointercancel')();assert.equal(run('nitro.held'),false);boostButton.handlers.get('pointerdown')({preventDefault(){},pointerId:5});inputHandlers.get('blur')();assert.equal(run('mode'),'paused');assert.equal(run('nitro.held'),false);
+assert.ok(!fs.readFileSync(new URL('../index.html',import.meta.url),'utf8').includes('id="aimPanel"'),'landing dialog is removed from the page');
+console.log('PASS: Nitro acceleration/release, touch cancellation, focus-loss pause and no landing dialog.');

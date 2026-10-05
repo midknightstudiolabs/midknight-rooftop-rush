@@ -1,6 +1,6 @@
 import * as THREE from './three.module.js';
-import {EncounterDirector,bendAt,pounceVelocity,smokeStage} from './rooftops.js?v=calm10';
-import {createMidknight} from './character-sprite.js?v=calm10';
+import {EncounterDirector,bendAt,pounceVelocity,smokeStage} from './rooftops.js?v=routes11';
+import {createMidknight} from './character-sprite.js?v=routes11';
 
 // Keep the skyline stationary: no vertex warping or moving horizon.
 export function curveMaterial(material){return material;}
@@ -16,7 +16,7 @@ export function createAdventure(api){
  const smokeMat=curveMaterial(new THREE.MeshStandardMaterial({color:'#a8a0b4',transparent:true,opacity:.32,depthWrite:false,roughness:1}),route);
  const cloth=mat('#bf839c'),brick=mat('#72516b'),feather=mat('#b9b6ce'),warning=mat('#efb857',.3);
  const lineMat=mat('#d4bc8f'),leaf=mat('#5a8b80');
- let card=null,eventUntil=0,aim=null,fork=null,flight=null,race=null,eventCount=0,routeLabel='ROOFTOP DISTRICT',balance=0;
+ let card=null,eventUntil=0,fork=null,race=null,eventCount=0,routeLabel='ROOFTOP DISTRICT',balance=0;
  const rival=(api.avatarFactory??createMidknight)({camera,tint:0xb9c6ff});rival.loaded.catch(()=>{});scene.add(rival.root);
  const rivalState={x:0,y:0,vx:0,vy:0,grounded:true,crouch:0,landing:0,phase:0};
  const $=id=>document.getElementById(id);
@@ -35,10 +35,10 @@ export function createAdventure(api){
   return o;
  }
  function coins(lane,z,count=6,y=0){for(let k=0;k<count;k++)createObject('coin',lane,z-k*2.2,y);}
- function routeRamp(lane,z){const ramp=createObject('ramp',lane,z);ramp.routeRamp=true;}
+ function routeRamp(lane,z,top=2.76){const ramp=createObject('ramp',lane,z);ramp.routeRamp=true;ramp.routeTop=top;}
  function spawnChimney(lane,z){const o=actor('chimney',lane,z);box(brick,[0,.62,0],[1.05,1.24,1.05],o.mesh);box(mats.rail,[0,1.28,0],[1.3,.18,1.3],o.mesh);box(mats.black,[0,1.38,0],[.85,.02,.85],o.mesh);o.ring=mesh(ringGeo,warning,[0,.03,0],[1.3,1.3,1.3],o.mesh);o.ring.rotation.x=-Math.PI/2;return o;}
  function build(card){
-  const l=card.lane,z=-82;eventCount++;routeLabel=card.name;eventUntil=getState().distance+125;
+  const l=card.lane,z=-82;api.scheduleRoute?.(getState().distance+(card.id==='rival'?240:140),l);eventCount++;routeLabel=card.name;eventUntil=getState().distance+125;
   $('encounterName').textContent=card.name;$('encounterHint').textContent=card.hint;$('encounterIcon').textContent=card.icon;
   toast(card.name);
   if(card.id==='chimney'){spawnChimney(l,z);spawnChimney(0,z-24);coins(-l,z+14,18);}
@@ -46,7 +46,7 @@ export function createAdventure(api){
    fork={z:z+12,used:false,markers:[]};
    const choices=[{lane:-1,top:2.76,name:'HIGH ROOF',reward:220,width:2.35},{lane:0,top:0,name:'SAFE BRIDGE',reward:80,width:2.35},{lane:1,top:3.5,name:'BONUS PERCH',reward:400,width:1.35}];
    fork.choices=choices;
-   for(const c of choices){const p=c.top?platform(c.lane,z,30,c.top,c.width):null;const g=group(c.lane*2.8,z+10,c.top+.08);const r=mesh(ringGeo,c.lane===1?mats.gold:mats.moon,[0,0,0],[1,1,1],g);r.rotation.x=-Math.PI/2;fork.markers.push({mesh:g,ring:r});coins(c.lane,z+5,9,c.top);if(p)p.fork=true;}
+   for(const c of choices){const p=c.top?platform(c.lane,z,30,c.top,c.width):null;const g=group(c.lane*2.8,z+10,c.top+.08);const r=mesh(ringGeo,c.lane===1?mats.gold:mats.moon,[0,0,0],[1,1,1],g);r.rotation.x=-Math.PI/2;fork.markers.push({mesh:g,ring:r});coins(c.lane,z+5,9,c.top);if(p){p.fork=true;routeRamp(c.lane,z+28,c.top);}}
    createObject('gate',1,z-7,3.5);
   }
   if(card.id==='shutters'){
@@ -78,27 +78,13 @@ export function createAdventure(api){
    coins(0,z+5,10);
   }
  }
- function reset(){for(const list of [actors,platforms,clouds]){list.forEach(o=>scene.remove(o.mesh));list.length=0;}if(fork)fork.markers.forEach(o=>scene.remove(o.mesh));director.seed=729;director.reset();card=null;aim=null;fork=null;flight=null;race=null;eventCount=0;balance=0;route.value=0;rival.root.visible=false;routeLabel='ROOFTOP DISTRICT';$('aimPanel').hidden=true;$('racePanel').hidden=true;$('encounter').hidden=true;}
- function beginAim(){
-  if(aim)return true;
-  if(!fork||fork.used||fork.z < -getState().speed*1.45||fork.z> -9||physics.moon<1||physics.airPounced)return false;
-  aim={lane:physics.lane,time:0};$('aimPanel').hidden=false;toast('CHOOSE YOUR LANDING · RELEASE TO POUNCE');updateAimUI();return true;
- }
- function updateAimUI(){if(!aim)return;for(let i=-1;i<=1;i++){const el=$('landing'+(i+1));el.classList.toggle('selected',i===aim.lane);el.setAttribute('aria-pressed',String(i===aim.lane));}$('aimTime').style.width=`${Math.max(0,1-aim.time/3)*100}%`;}
- function choose(lane){if(!aim)return false;aim.lane=Math.max(-1,Math.min(1,lane));updateAimUI();return true;}
- function releaseAim(){
-  if(!aim||!fork)return false;const c=fork.choices.find(c=>c.lane===aim.lane),s=getState();
-  const seconds=Math.max(.9,Math.min(1.5,(-fork.z+2)/s.speed));
-  physics.moon--;physics.regen=0;physics.lane=c.lane;physics.launch(pounceVelocity(physics.y,c.top,seconds));physics.airPounced=true;physics.phase=.65;physics.jumpHeld=true;
-  flight={choice:c,speed:s.speed,remaining:seconds+.8,rewarded:false};fork.used=true;aim=null;$('aimPanel').hidden=true;toast(c.name+' · COMMIT!');cue(880,.2,.035,'triangle');return true;
- }
- function realtime(dt){if(aim){aim.time+=dt;updateAimUI();if(aim.time>=3)releaseAim();}}
+ function reset(){for(const list of [actors,platforms,clouds]){list.forEach(o=>scene.remove(o.mesh));list.length=0;}if(fork)fork.markers.forEach(o=>scene.remove(o.mesh));director.seed=729;director.reset();card=null;fork=null;race=null;eventCount=0;balance=0;route.value=0;rival.root.visible=false;routeLabel='ROOFTOP DISTRICT';$('racePanel').hidden=true;$('encounter').hidden=true;}
  function emitSmoke(o){for(let i=0;i<7&&clouds.length<28;i++){const g=group(o.mesh.position.x+(i%3-1)*.38,o.mesh.position.z,1.5+i*.35);ball(smokeMat,[0,0,0],[.45,.4,.5],g);clouds.push({mesh:g,life:1.9,age:0,drift:(i%3-1)*.25});}}
  function advance(dt,step){
   const s=getState();route.value=s.distance;
   const next=api.autospawn===false?null:director.advance(s.distance);if(next){card=next;build(card);}
   $('encounter').hidden=false;
-  if(s.distance>eventUntil){$('encounterName').textContent='FIND YOUR FLOW';$('encounterHint').textContent='A breath between rooftops. Follow the gold.';}
+  if(s.distance>eventUntil){$('encounterName').textContent='SPLIT SKYBRIDGES';$('encounterHint').textContent='Choose a lit roof. Jump the gaps. Hold Nitro when the way is clear.';}
   for(const o of [...actors]){o.previousZ=o.mesh.position.z;o.mesh.position.z+=step;
    const z=o.mesh.position.z;
    if(!o.triggered&&z > -s.speed*1.55){o.triggered=true;o.t=0;if(o.type==='chimney'){toast('CHIMNEY COUGH · CLEAR THE VENT');cue(160,.25,.025,'triangle');}if(o.type==='shutter'){toast('SHUTTERS OPENING');cue(320,.12,.02,'triangle');}}
@@ -120,9 +106,8 @@ export function createAdventure(api){
    if(p.clothes)for(let i=0;i<p.clothes.length;i++)p.clothes[i].rotation.z=Math.sin(s.time*1.5+i)*.12;
    if(z>p.length/2+30)remove(p,platforms);
   }
-  if(fork){fork.z+=step;fork.markers.forEach(o=>{o.mesh.position.z+=step;o.ring.scale.setScalar(1+.07*Math.sin(s.time*2));});if(fork.z>28){fork.markers.forEach(o=>scene.remove(o.mesh));fork=null;aim=null;$('aimPanel').hidden=true;}}
+  if(fork){fork.z+=step;fork.markers.forEach(o=>{o.mesh.position.z+=step;o.ring.scale.setScalar(1+.07*Math.sin(s.time*2));});if(fork.z>28){fork.markers.forEach(o=>scene.remove(o.mesh));fork=null;}}
   for(const c of [...clouds]){c.age+=dt;c.life-=dt;c.mesh.position.z+=step;c.mesh.position.x+=c.drift*dt;c.mesh.position.y+=dt*.8;const scale=(1+c.age*.8)*Math.min(1,c.life/.4);c.mesh.scale.setScalar(Math.max(.01,scale));if(c.life<=0)remove(c,clouds);}
-  if(flight){flight.remaining-=dt;if(flight.remaining<=0)flight=null;}
   if(race){
    if(s.distance>=race.start&&race.baseline===null){race.baseline=s.styleScore;toast('RIVAL RACE · GOLD + TRICKS TO OVERTAKE');}
    if(race.baseline!==null&&!race.finished){race.progress=Math.min(1,(s.styleScore-race.baseline)/600);race.z=-12+race.progress*19;$('racePanel').hidden=false;$('raceFill').style.width=`${race.progress*100}%`;$('raceLabel').textContent=`NIGHT CAT · ${Math.max(0,Math.ceil(race.end-s.distance))} m TO FINISH`;if(s.distance>=race.end){race.finished=true;const won=race.progress>=1;if(won)addStyle('RIVAL OUTSMARTED',600);else toast('NIGHT CAT WINS · CHASE THE GOLD NEXT TIME');$('racePanel').hidden=true;}}
@@ -145,18 +130,16 @@ export function createAdventure(api){
    if(!support.active){support.active=true;support.start=s.distance;}
    if(!support.rewarded&&s.distance-support.start>Math.min(13,support.length*.5)){support.rewarded=true;addStyle(support.kind==='line'?'LAUNDRY ACROBAT':support.kind==='collapse'?'TILES OF TROUBLE':support.kind==='corner'?'CORNER CUTTER':'SKYLINE EXPLORER',support.kind==='line'?350:250);}
   }
-  if(flight&&physics.landed&&!flight.rewarded){flight.rewarded=true;const c=flight.choice;if(Math.abs(physics.x-c.lane*2.8)<c.width/2+.2&&Math.abs(physics.y-c.top)<.1)addStyle(c.name+' LANDING',c.reward);else toast('SOFT LANDING · TRY ANOTHER PERCH');flight=null;}
+
  }
  function render(dt){
   if(race&&rival.ready){const s=getState();rivalState.x=THREE.MathUtils.damp(rivalState.x,race.lane*2.8,3,dt);rivalState.y=.08;const z=race.z;rival.animate(dt,rivalState,s.speed,s.time);rival.root.position.x+=bendAt(s.distance,z);rival.root.position.z=z;rival.root.scale.setScalar(.78);rival.root.visible=true;}else rival.root.visible=false;
  }
  function surfaces(){return platforms.flatMap(p=>p.kind==='collapse'?p.tiles.filter(t=>t.drop===0).map(t=>({x:p.lane*2.8,z:p.mesh.position.z+t.z,halfWidth:p.width/2,halfLength:1,top:p.top})):[{x:p.lane*2.8,z:p.mesh.position.z,halfWidth:p.width/2,halfLength:p.length/2,top:p.top}]);}
- function canSpawn(){return !aim&&getState().distance>eventUntil-12&&!race;}
- function setVisible(show){if(!show){rival.root.visible=false;$('aimPanel').hidden=true;$('racePanel').hidden=true;$('encounter').hidden=true;}else if(aim)$('aimPanel').hidden=false;}
- return {reset,advance,collide,render,surfaces,canSpawn,beginAim,releaseAim,realtime,choose,setVisible,
-  move(d){return aim?choose(aim.lane+d):false;},get aiming(){return !!aim;},get timeScale(){return aim ? .22 : 1;},get lockedSpeed(){return flight?.speed??null;},get readyToAim(){return !!fork&&!fork.used&&fork.z>=-getState().speed*1.45&&fork.z<=-9;},
-  snapshot(){return {encounter:card?.id??null,hazardLane:card?.lane??null,encounters:eventCount,aiming:!!aim,selectedLane:aim?.lane??null,racing:!!race,curve:bendAt(getState().distance,-60),platforms:platforms.length,actors:actors.length,clouds:clouds.length};},
-  // Deterministic entry point also used by the gameplay regression harness.
+ function canSpawn(){return getState().distance>eventUntil-12&&!race;}
+ function setVisible(show){if(!show){rival.root.visible=false;$('racePanel').hidden=true;$('encounter').hidden=true;}}
+ return {reset,advance,collide,render,surfaces,canSpawn,setVisible,
+  snapshot(){return {encounter:card?.id??null,hazardLane:card?.lane??null,encounters:eventCount,racing:!!race,curve:0,platforms:platforms.length,actors:actors.length,clouds:clouds.length};},
   buildEncounter(id){const c=director.deck.includes(id)?{id,lane:-1,name:id.toUpperCase(),hint:'',icon:'✦'}:null;if(!c)throw Error('Unknown encounter');build(c);}
  };
 }

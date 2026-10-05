@@ -1,7 +1,7 @@
 // Shared route math and encounter planning; independent of rendering and input.
 export const ENCOUNTERS = Object.freeze([
  {id:'chimney',name:'THE CHIMNEY WORKS',hint:'A cough, a puff, then smoke. Take the clear lane.',icon:'♨'},
- {id:'fork',name:'THREE WAYS HOME',hint:'Hold POUNCE, choose a landing, then release.',icon:'⑂'},
+ {id:'fork',name:'THREE WAYS HOME',hint:'Steer onto a gold ramp for the high route, or take the low bridge.',icon:'⑂'},
  {id:'shutters',name:'AFTER HOURS',hint:'Amber windows are about to open. Mind the shutters.',icon:'▥'},
  {id:'pigeons',name:'FEATHER EFFECT',hint:'Startle the flock. Watch what they knock over.',icon:'⌁'},
  {id:'collapse',name:'LOOSE TILES',hint:'Take the gold ramp. Keep moving on the crumbling roof.',icon:'▧'},
@@ -22,7 +22,7 @@ export class EncounterDirector {
  advance(distance){
   if(distance<this.next)return null;
   const id=this.deck[this.index++],card=ENCOUNTERS.find(e=>e.id===id);
-  this.next=distance+(id==='rival'?235:135);this.last=id;
+  this.next=distance+(id==='rival'?335:235);this.last=id;
   if(this.index===this.deck.length){this.index=0;this.cycle++;const last=id;for(let i=this.deck.length-1;i>0;i--){const j=Math.floor(this.random()*(i+1));[this.deck[i],this.deck[j]]=[this.deck[j],this.deck[i]];}if(this.deck[0]===last)[this.deck[0],this.deck[1]]=[this.deck[1],this.deck[0]];}
   return {...card,lane:(this.cycle+this.index)%2?1:-1,cycle:this.cycle};
  }

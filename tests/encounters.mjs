@@ -13,8 +13,8 @@ function harness(autospawn=false){
  const box=(m,p,s,parent)=>mesh(new THREE.BoxGeometry(),m,p,s,parent),ball=(m,p,s,parent)=>mesh(new THREE.SphereGeometry(1,8,6),m,p,s,parent);
  const a=createAdventure({scene,camera,physics,route,mat,mats,mesh,box,ball,autospawn,avatarFactory:()=>({loaded:Promise.resolve(),root:new THREE.Group(),ready:true,animate(){}}),getState:()=>state,toast:s=>messages.push(s),hit:()=>{hits++},addStyle:(label,points)=>{rewards.push(label);state.styleScore+=points},createObject:(type,l,z,height=0)=>{const o={type,l,z,height,done:false};objects.push(o);return o;}});
  function tick(seconds){for(let i=0;i<Math.round(seconds/STEP);i++){
-  if(a.lockedSpeed!==null)state.speed=a.lockedSpeed;const travel=state.speed*STEP;state.distance+=travel;state.time+=STEP;a.advance(STEP,travel);
-  for(const o of objects){o.z+=travel;if(o.type==='ramp'&&!o.done&&Math.abs(o.z)<1.65&&Math.abs(physics.x-o.l*2.8)<1.05&&physics.y<.7){physics.launch(o.routeRamp?rampVelocity(state.speed,physics.y):14.5);o.done=true;}}
+  const travel=state.speed*STEP;state.distance+=travel;state.time+=STEP;a.advance(STEP,travel);
+  for(const o of objects){o.z+=travel;if(o.type==='ramp'&&!o.done&&Math.abs(o.z)<1.65&&Math.abs(physics.x-o.l*2.8)<1.05&&physics.y<.7){physics.launch(o.routeRamp?rampVelocity(state.speed,physics.y,o.routeTop??2.76):14.5);o.done=true;}}
   physics.step(STEP,a.surfaces());a.collide(STEP);a.render(STEP);
  }}
  return {a,state,physics,scene,rewards,messages,objects,tick,get hits(){return hits}};
@@ -32,18 +32,12 @@ for(const e of ENCOUNTERS){const h=harness();if(['chimney','shutters'].includes(
 for(const crouch of [false,true]){const h=harness();h.physics.x=-2.8;h.physics.lane=-1;h.a.buildEncounter('shutters');for(let i=0;i<640;i++){if(crouch)h.physics.duck();h.tick(STEP);}assert.equal(h.hits>0,!crouch);}
 // Pigeons only cause the falling-pot hazard when actually startled.
 {const h=harness();h.physics.x=-2.8;h.physics.lane=-1;h.a.buildEncounter('pigeons');h.tick(6.3);assert.ok(h.messages.some(s=>s.includes('FEATHER EFFECT')));assert.ok(h.hits>0);}
-// Ballistic choices must land on the selected height at slow and fast speeds.
-for(const speed of [16,25,40])for(const lane of [-1,0,1]){
- const h=harness();h.state.speed=speed;h.a.buildEncounter('fork');while(!h.a.readyToAim)h.tick(STEP);
- assert.ok(h.a.beginAim());assert.equal(h.a.timeScale,.22);h.a.choose(lane);assert.ok(h.a.releaseAim());assert.equal(h.physics.moon,2);h.tick(2.1);
- assert.ok(h.rewards.some(s=>s.endsWith('LANDING')),`successful target landing at ${speed}, lane ${lane}; got ${h.rewards}`);assert.equal(h.hits,0);
-}
-// Aiming auto-releases and cannot consume a second charge while already airborne.
-{const h=harness();h.a.buildEncounter('fork');while(!h.a.readyToAim)h.tick(STEP);h.a.beginAim();h.a.realtime(3.01);assert.equal(h.a.aiming,false);assert.equal(h.physics.moon,2);assert.equal(h.a.beginAim(),false);}
+// Forks are traversed by steering onto ramps, without any modal or time stop.
+for(const speed of [16,22,28])for(const lane of [-1,0,1]){const h=harness();h.state.speed=speed;h.physics.x=lane*2.8;h.physics.lane=lane;h.a.buildEncounter('fork');h.tick(9);assert.equal(h.hits,0,'fork ramp at '+speed+' lane '+lane);if(lane!==0)assert.ok(h.rewards.length>0);}
 // High routes are reachable from their ramp at the entire speed range.
 for(const kind of ['collapse','laundry','corner'])for(const speed of [16,25,40]){const h=harness();h.state.speed=speed;h.physics.x=-2.8;h.physics.lane=-1;h.a.buildEncounter(kind);h.tick(9);assert.equal(h.hits,0,kind+' ramp remains fair at '+speed);assert.ok(h.rewards.length>0,kind+' traversal gives a reward at '+speed);}
 // Race resolves in either direction, and restart removes every temporary prop.
-for(const win of [false,true]){const h=harness();h.a.buildEncounter('rival');h.tick(4.2);if(win)h.state.styleScore+=650;h.tick(10);assert.equal(h.rewards.includes('RIVAL OUTSMARTED'),win);h.a.reset();assert.equal(h.a.snapshot().actors,0);assert.equal(h.a.snapshot().platforms,0);assert.equal(h.a.snapshot().racing,false);assert.equal(h.a.snapshot().aiming,false);}
+for(const win of [false,true]){const h=harness();h.a.buildEncounter('rival');h.tick(4.2);if(win)h.state.styleScore+=650;h.tick(10);assert.equal(h.rewards.includes('RIVAL OUTSMARTED'),win);h.a.reset();assert.equal(h.a.snapshot().actors,0);assert.equal(h.a.snapshot().platforms,0);assert.equal(h.a.snapshot().racing,false);}
 // Long sessions recycle actors and platforms instead of accumulating a city forever.
-{const h=harness(true);h.state.rush=10000;h.state.speed=40;for(let i=0;i<900;i++){h.tick(.1);const s=h.a.snapshot();assert.ok(s.actors<20&&s.platforms<8&&s.clouds<=28);}assert.ok(h.a.snapshot().encounters>15);}
-console.log('PASS: all eight encounters, safe routes, reactive smoke/shutters/pigeons, aimed landings, slow-motion timeout, high routes at 16–40 m/s, race win/loss and bounded cleanup.');
+{const h=harness(true);h.state.rush=10000;h.state.speed=40;for(let i=0;i<900;i++){h.tick(.1);const s=h.a.snapshot();assert.ok(s.actors<20&&s.platforms<8&&s.clouds<=28);}assert.ok(h.a.snapshot().encounters>10);}
+console.log('PASS: all eight encounters, safe routes, reactive smoke/shutters/pigeons, continuous forks, high routes at 16–40 m/s, race win/loss and bounded cleanup.');
