@@ -18,7 +18,7 @@ const inputHandlers=new Map();
 const ctx={Speedster,createSpeedTrail,RoofLayout,Nitro,curveMaterial,createAdventure:(api)=>createAdventure({...api,avatarFactory:createMidknight}),bendAt,rampVelocity,pounceVelocity,THREE:{...Three,WebGLRenderer:class{setPixelRatio(){}setSize(){}render(){}}},CatPhysics,STEP,sweptOverlap,createMidknight,document:{getElementById:element,body:element('body'),addEventListener(){},modelContext:{registerTool(t){registered.set(t.name,t)}}},localStorage:{getItem(){return '0'},setItem(){}},window:{},innerWidth:1440,innerHeight:900,devicePixelRatio:1,requestAnimationFrame(){},addEventListener(name,fn){inputHandlers.set(name,fn)},performance,console,Math,AbortController,Error};
 const source=fs.readFileSync(new URL('../game.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'');vm.createContext(ctx);vm.runInContext(source,ctx);const run=code=>vm.runInContext(code,ctx);const reset=()=>run('sound=false;start();spawnClock=999;invincible=0;');
 await run('avatar.loaded');
-reset();run("createObject('barrier',0,-.1);update(STEP);");assert.equal(run('lives'),0);assert.equal(run('mode'),'splat');const crashDistance=run('distance');run('update(STEP)');assert.equal(run('distance'),crashDistance);
+reset();run("createObject('barrier',0,-.1);update(STEP);");assert.equal(run('lives'),2);assert.equal(run('mode'),'splat');const crashDistance=run('distance');run('update(STEP)');assert.equal(run('distance'),crashDistance);
 reset();run("duck();for(let i=0;i<30;i++)update(STEP);createObject('overhead',0,-.1);for(let i=0;i<10;i++)update(STEP);");assert.equal(run('lives'),3);assert.equal(run('tricks'),1);assert.equal(run('combo'),1);
 reset();run("shield=5;createObject('penthouse',0,-.1);update(STEP);");assert.equal(run('mode'),'splat');assert.equal(run('shield'),0);
 reset();run('shield=5;hit(false);');assert.equal(run('lives'),3);assert.equal(run('shield'),0);
@@ -68,7 +68,7 @@ run('home();start();');assert.equal(run('nitro.fuel'),60);assert.equal(run('nitr
 console.log('PASS: continuous route selection, Nitro key press/release, pause safety and reset.');
 
 // A crash freezes every world object, rejects movement and preserves the impact spot.
-reset();run("createObject('barrier',0,-2);while(mode==='running')update(STEP);");
+reset();run("lives=1;createObject('barrier',0,-2);while(mode==='running')update(STEP);");
 const stopped=run('({distance,z:objects[0].mesh.position.z,x:physics.x})');
 run('move(1);jump();duck();for(let i=0;i<75;i++)frame(last+1000/60);');
 assert.equal(run('distance'),stopped.distance);assert.equal(run('objects[0].mesh.position.z'),stopped.z);assert.equal(run('physics.x'),stopped.x);assert.equal(run('speed'),0);assert.equal(run('mode'),'over');
@@ -116,3 +116,30 @@ run('physics.pounce();update(STEP);');assert.ok(run('nitro.active'),'boost conti
 run('pause();');assert.equal(run('speedster.amount'),0);assert.equal(run('speedTrail.visible'),false);run('home();start();');assert.equal(run('speedster.worldScale'),1);
 reset();run("nitro.press();createObject('barrier',0,-.1);update(STEP);");assert.equal(run('mode'),'splat');assert.equal(run('speedster.amount'),0);assert.equal(run('speedTrail.visible'),false);
 console.log('PASS: slowed environment with faster forward travel, faster stride, airborne boost, fixed camera and effect cleanup.');
+
+// All three hearts must be usable, with no restart between the first two hits.
+reset();run('coins=17;styleScore=450;');
+for(const remaining of [2,1,0]){
+ run("invincible=0;createObject('barrier',physics.lane,-.1);update(STEP);");
+ assert.equal(run('lives'),remaining);assert.equal(run('mode'),'splat');assert.equal(element('endScreen').hidden,true);
+ const atImpact=run('distance');run(`for(let i=0;i<${remaining?82:150};i++)update(STEP);`);
+ assert.equal(run('coins'),17);assert.equal(run('styleScore'),450);
+ if(remaining){
+  assert.equal(run('mode'),'running');assert.ok(run('distance')>atImpact);assert.ok(run('terrain.supported(distance,physics.x)'));assert.ok(run('invincible')>2);
+  run('hit(true);hit(false);hit(true);');assert.equal(run('lives'),remaining,'overlapping damage cannot drain remaining hearts');
+  assert.equal(element('endScreen').hidden,true);assert.equal(run('recovery'),null);assert.equal(run('splatEnded'),false);
+ }else{assert.equal(run('mode'),'over');assert.equal(run('distance'),atImpact);assert.equal(element('endScreen').hidden,false);}
+}
+run('start();');assert.equal(run('lives'),3);assert.equal(run('recovery'),null);
+// Recovery still finds footing on a split bridge after a fall.
+reset();run('distance=160;terrain.schedule(144,1);physics.y=-3.1;physics.grounded=false;update(STEP);for(let i=0;i<82;i++)update(STEP);');
+assert.equal(run('mode'),'running');assert.equal(run('lives'),2);assert.equal(run('physics.y'),0);assert.ok(run('terrain.supported(distance,physics.x)'));
+// If every lane is blocked, clear only the recovery pocket on the chosen lane.
+reset();run("for(const lane of [-1,0,1])createObject('barrier',lane,-.1);update(STEP);for(let i=0;i<82;i++)update(STEP);");
+assert.equal(run('lives'),2);assert.equal(run('mode'),'running');assert.equal(run("objects.filter(o=>o.type==='barrier').length"),2);
+// A sustained encounter body also costs one heart and then resumes.
+reset();run("physics.lane=-1;physics.x=-2.8;adventure.buildEncounter('chimney');for(let i=0;i<1000;i++)update(STEP);");
+assert.equal(run('mode'),'running');assert.equal(run('lives'),2);
+console.log('PASS: three separate damage events, automatic recovery, retained score, grace period, gap rescue and crowded/encounter recovery.');
+reset();run("createObject('barrier',0,-.1);update(STEP);update(.1);");const recoveryTime=run('splatTime');inputHandlers.get('blur')();assert.equal(run('mode'),'paused');run('update(1);');assert.equal(run('splatTime'),recoveryTime);run('pause();');assert.equal(run('mode'),'splat');run('for(let i=0;i<82;i++)update(STEP);');assert.equal(run('mode'),'running');assert.equal(run('lives'),2);
+console.log('PASS: focus loss pauses recovery, and resume completes it without spending another heart.');

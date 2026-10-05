@@ -1,6 +1,6 @@
 # Midknight Rooftop Rush
 
-A browser playtest starring Midknight, a fluffy black tuxedo cat, exploring a reactive moonlit rooftop district. Version 0.14 separates forward travel from slow motion: Speedster now genuinely accelerates Midknight while the city’s animated hazards slow down.
+A browser playtest starring Midknight, a fluffy black tuxedo cat, exploring a reactive moonlit rooftop district. Version 0.15 makes all three hearts count: collisions and falls cost one heart, with automatic recovery until the last heart is lost.
 
 **[Play in your browser](https://midknightstudiolabs.github.io/midknight-rooftop-rush/)**
 
@@ -18,7 +18,7 @@ No installation, account or API key is needed to play. Desktop keyboard and mobi
 | Choose a high route | Steer onto a gold ramp | Swipe into the ramp lane |
 | Pause | P or Escape | Pause button |
 
-Collect gold, follow ramps onto raised roof sections, chain clean tricks and catch three Moon Gates to awaken a district. Moon Pounce spends a recharging moonlight charge and briefly protects against smoke. Solid objects always stop the run.
+Collect gold, follow ramps onto raised roof sections, chain clean tricks and catch three Moon Gates to awaken a district. Moon Pounce spends a recharging moonlight charge and briefly protects against smoke. Solid collisions cost one heart; the run ends when no hearts remain.
 
 ## Run locally
 
@@ -34,12 +34,12 @@ Open http://127.0.0.1:4173. There are no dependencies to install. For the automa
 
 - A stationary skyline and camera, with local curved roof geometry instead of world bending, camera bob, jump tracking or Rush zoom. The viewport is fitted once on resize to keep all lanes visible on phones.
 - Baseline pace starts at 12 m/s and gradually caps at 16 m/s. Broad bends move the roof centerline at most 1.1 m; camera rotation and FOV never follow them. Geometry, steering, pickups and gap support share the same route coordinates. Distant buildings are stationary, dimmer and drawn in batches; repeated floor stripes and passing lamps are removed.
-- Hard collisions stop the world immediately, squash Midknight into a flat liquid-cat pose, then show the restart screen. Rush, shields and pounces cannot pass through solid obstacles.
+- Hard collisions cost one heart and briefly squash Midknight into a liquid-cat pose. With hearts remaining, a 0.65-second recovery puts the cat on a clear nearby roof and resumes the same run, preserving distance, gold and score. A 2.3-second grace period prevents stacked damage without blinking. Falling into a gap also costs one heart. Only the last heart ends the run. Smoke shields and pounces do not prevent solid-impact damage outside the grace period.
 - Manual Nitro reaches 1.75× normal travel speed (21–28 m/s) with gradual acceleration and deceleration. Fuel starts at 60%, refills from gold and tricks, and drains at 28% per real second on roofs and in the air. Airborne speed stays steady for predictable landings. The camera and FOV remain fixed.
 - Speedster eases environmental animation to 18% time with up to 2.3× stride playback, on top of the existing speed-based cadence (about 3× the ordinary stride at full boost). Moving hazards, smoke, particles and rivals slow down; player travel and vertical physics use real time to preserve landing distances. Steering responds 35% faster and fuel drains in real time. Release eases the world back to normal; pause, crashes and restart clear the effect. Longer gold ribbons accompany the cat without flashes, zoom or screen effects.
 - Eight encounter types: chimney smoke, three-way pounce forks, opening shutters, pigeon-triggered falling pots, crumbling roof tiles, laundry lines, rival races and raised shortcuts.
 - Route choices happen through steering and jumping, without a landing dialog or automatic slowdown.
-- Split skybridges, missing roof sections, offset connections and narrow center bridges create physical route choices. Full-width junctions let players change paths between splits. Walking into a gap causes a fall; a clear lit roof remains reachable.
+- Split skybridges, missing roof sections, offset connections and narrow center bridges create physical route choices. Full-width junctions let players change paths between splits. Walking into a gap costs one heart and triggers recovery; a clear lit roof remains reachable.
 - High roofs, a safe bridge route and narrow bonus perches; ramp launch velocity adapts to running speed.
 - Telegraphs and sound cues before hazards activate. Smoke stays local to its chimney; no full-screen flashes.
 - Night Cat races won by collecting gold and landing tricks; an encounter deck shuffles after every complete cycle.

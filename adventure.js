@@ -1,6 +1,6 @@
 import * as THREE from './three.module.js';
-import {EncounterDirector,bendAt,pounceVelocity,smokeStage} from './rooftops.js?v=speedster14';
-import {createMidknight} from './character-sprite.js?v=speedster14';
+import {EncounterDirector,bendAt,pounceVelocity,smokeStage} from './rooftops.js?v=hearts15';
+import {createMidknight} from './character-sprite.js?v=hearts15';
 
 // Keep the skyline stationary: no vertex warping or moving horizon.
 export function curveMaterial(material){return material;}
@@ -138,7 +138,9 @@ export function createAdventure(api){
  function surfaces(){return platforms.flatMap(p=>p.kind==='collapse'?p.tiles.filter(t=>t.drop===0).map(t=>({x:p.lane*2.8,z:p.mesh.position.z+t.z,halfWidth:p.width/2,halfLength:1,top:p.top})):[{x:p.lane*2.8,z:p.mesh.position.z,halfWidth:p.width/2,halfLength:p.length/2,top:p.top}]);}
  function canSpawn(){return getState().distance>eventUntil-12&&!race;}
  function setVisible(show){if(!show){rival.root.visible=false;$('racePanel').hidden=true;$('encounter').hidden=true;}}
- return {reset,advance,collide,render,surfaces,canSpawn,setVisible,
+ function recoveryHazards(){return actors.filter(o=>o.type!=='pigeons'||o.scattered).map(o=>({x:o.mesh.position.x,z:o.mesh.position.z-(o.type==='pigeons'?15:0),halfLength:1.5}));}
+ function clearRecoveryPath(x){for(let i=actors.length-1;i>=0;i--){const o=actors[i],z=o.mesh.position.z-(o.type==='pigeons'?15:0);if(Math.abs(o.mesh.position.x-x)<1.6&&z>-9.5&&z<3.5){scene.remove(o.mesh);actors.splice(i,1);}}}
+ return {reset,advance,collide,render,surfaces,canSpawn,setVisible,recoveryHazards,clearRecoveryPath,
   snapshot(){return {encounter:card?.id??null,hazardLane:card?.lane??null,encounters:eventCount,racing:!!race,curve:0,platforms:platforms.length,actors:actors.length,clouds:clouds.length};},
   buildEncounter(id){const c=director.deck.includes(id)?{id,lane:-1,name:id.toUpperCase(),hint:'',icon:'✦'}:null;if(!c)throw Error('Unknown encounter');build(c);}
  };

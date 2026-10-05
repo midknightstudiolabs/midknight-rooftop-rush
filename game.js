@@ -1,10 +1,10 @@
 import * as THREE from './three.module.js';
-import {createMidknight} from './character-sprite.js?v=speedster14';
-import {CatPhysics,STEP,sweptOverlap} from './physics.js?v=speedster14';
-import {curveMaterial,createAdventure} from './adventure.js?v=speedster14';
-import {bendAt,rampVelocity,pounceVelocity} from './rooftops.js?v=speedster14';
-import {RoofLayout,Nitro} from './terrain.js?v=speedster14';
-import {Speedster,createSpeedTrail} from './speedster.js?v=speedster14';
+import {createMidknight} from './character-sprite.js?v=hearts15';
+import {CatPhysics,STEP,sweptOverlap} from './physics.js?v=hearts15';
+import {curveMaterial,createAdventure} from './adventure.js?v=hearts15';
+import {bendAt,rampVelocity,pounceVelocity} from './rooftops.js?v=hearts15';
+import {RoofLayout,Nitro} from './terrain.js?v=hearts15';
+import {Speedster,createSpeedTrail} from './speedster.js?v=hearts15';
 const route={value:0},terrain=new RoofLayout(),nitro=new Nitro(),speedster=new Speedster();
 
 const $=id=>document.getElementById(id);
@@ -67,6 +67,7 @@ const avatar=createMidknight({camera}),cat=avatar.root;scene.add(cat);
 const speedTrail=createSpeedTrail(scene);
 const shadow=mesh(new THREE.CircleGeometry(.7,28),new THREE.MeshBasicMaterial({color:0x080511,transparent:true,opacity:.38}),[0,.18,0],[1,1.6,1]);shadow.rotation.x=-Math.PI/2;
 const physics=new CatPhysics();
+let recovery=null,splatFromX=0,preHitSpeed=12;
 let splatTime=0,splatFromY=0,splatFloor=0,splatEnded=false,motionScale=1;
 let mode='menu',distance=0,coins=0,lives=3,charge=0,rush=0,shield=0,magnet=0,invincible=0,speed=12,spawnClock=0,time=0,best=0,toastTimer=0;
 const districtTint=new THREE.Color('#21102f');let districtGlow=0;
@@ -80,9 +81,9 @@ function toast(s){$('toast').textContent=s;$('toast').classList.add('show');toas
 function setMode(m){mode=m;$('menu').hidden=m!=='menu';$('hud').hidden=m==='menu';$('pauseScreen').hidden=m!=='paused';$('endScreen').hidden=m!=='over';document.body.classList.toggle('playing',m!=='menu');cat.visible=m!=='menu';shadow.visible=cat.visible;$('pounceBtn').hidden=m!=='running';$('nitroBtn').hidden=m!=='running';$('steerControls').hidden=m!=='running';if(m!=='running'){nitro.release();speedster.reset();speedTrail.reset();}adventure.setVisible(m==='running');}
 function clearObjects(){objects.forEach(o=>scene.remove(o.mesh));objects=[];particles.forEach(p=>scene.remove(p.mesh));particles=[];}
 function resetCity(){awakened=0;districtGlow=0;districtTint.set('#21102f');buildingMats.forEach(m=>m.emissiveIntensity=0);scene.fog.color.set('#21102f');scene.background.set('#21102f');}
-function start(){if(!avatar.ready){toast(avatar.failed?"CHARACTER COULD NOT LOAD · RELOAD TO RETRY":"MIDKNIGHT IS GETTING READY…");return;}avatar.reset();audioInit();clearObjects();physics.reset();resetCity();adventure.reset();resetRoofs();nitro.reset();speedster.reset();speedTrail.reset();splatTime=0;splatEnded=false;motionScale=1;accumulator=0;distance=0;coins=0;lives=3;charge=0;rush=0;shield=0;magnet=0;invincible=2;speed=12;spawnClock=1.5;beat=0;styleScore=0;combo=0;comboTimer=0;tricks=0;gates=0;shake=0;gateHint=false;setComfortCamera();avatar.animate(0,physics,speed,time);setMode('running');toast('FOLLOW THE MOONLIGHT');updateHud();}
+function start(){if(!avatar.ready){toast(avatar.failed?"CHARACTER COULD NOT LOAD · RELOAD TO RETRY":"MIDKNIGHT IS GETTING READY…");return;}avatar.reset();audioInit();clearObjects();physics.reset();resetCity();adventure.reset();resetRoofs();nitro.reset();speedster.reset();speedTrail.reset();splatTime=0;splatEnded=false;recovery=null;motionScale=1;accumulator=0;distance=0;coins=0;lives=3;charge=0;rush=0;shield=0;magnet=0;invincible=2;speed=12;spawnClock=1.5;beat=0;styleScore=0;combo=0;comboTimer=0;tricks=0;gates=0;shake=0;gateHint=false;setComfortCamera();avatar.animate(0,physics,speed,time);setMode('running');toast('FOLLOW THE MOONLIGHT');updateHud();}
 function home(){clearObjects();adventure.reset();rush=0;shield=0;magnet=0;physics.phase=0;$('rushFx').classList.remove('active');$('phaseFx').classList.remove('active');setMode('menu');$('menuBest').textContent=String(Math.floor(best)).padStart(5,'0');}
-function pause(){if(mode==='running')setMode('paused');else if(mode==='paused'){setMode('running');audioInit();}}
+let pausedMode='running';function pause(){if(mode==='running'||(mode==='splat'&&recovery)){pausedMode=mode;setMode('paused');}else if(mode==='paused'){setMode(pausedMode);audioInit();}}
 function finish(){const previousBest=best;best=Math.max(best,Math.floor(distance));try{localStorage.setItem('midknight-rush-best',String(best));}catch{}$('endScore').textContent=Math.floor(distance);$('endCoins').textContent=coins;$('endBest').textContent=best;$('endStyle').textContent=styleScore.toLocaleString();$('endGates').textContent=gates;$('endTricks').textContent=tricks;$('endEyebrow').textContent=distance>previousBest?'✦ NEW PERSONAL BEST':'THE MOON WILL WAIT';$('endMessage').textContent=awakened?`${awakened} district${awakened===1?'':'s'} awakened. Leave a little more light next time.`:'Those rooftops still have secrets to find.';if(splatEnded){$('endEyebrow').textContent='CAT IS LIQUID.';$('endMessage').textContent='The wall was solid. Midknight was briefly a puddle. Ready to re-inflate?';}setMode('over');tone(164,.5,.06,'triangle');$('rushFx').classList.remove('active');$('phaseFx').classList.remove('active');}
 function move(d){if(mode==='running'){physics.move(d);tone(220+d*40,.045,.014);}}
 function pounceFeedback(){burst(new THREE.Vector3(physics.x,physics.y+.8,0),mats.moon,18);toast('☾ MOON POUNCE');tone(1046,.25,.055,'triangle');}
@@ -94,18 +95,31 @@ function burst(pos,color,count=12){count=Math.min(5,Math.ceil(count*.3));for(let
 function addStyle(label,points=100){combo=Math.min(8,combo+1);comboTimer=6;tricks++;nitro.collect(8);styleScore+=points*combo;physics.moon=Math.min(3,physics.moon+1);physics.regen=0;toast(`${label} · ×${combo}`);tone(660+combo*90,.15,.035,'triangle');}
 function collect(o){coins++;nitro.collect(4);styleScore+=10*Math.max(1,combo)*(nitro.active?2:1);tone(760+(coins%5)*120,.075,.026);burst(o.mesh.position.clone().add(new THREE.Vector3(0,1,0)),mats.gold,4);}
 function collectGate(o){gates++;addStyle('MOON GATE',250);burst(o.mesh.position.clone().add(new THREE.Vector3(0,1,0)),mats.moon,30);if(gates%3===0){awakened++;lives=Math.min(3,lives+1);physics.moon=3;shield=Math.max(shield,4);styleScore+=1000;districtGlow=.12+Math.min(awakened,3)*.09;districtTint.set(awakened%2?'#292047':'#312343');toast('✦ DISTRICT AWAKENED · +1000');tone(1318,.6,.07,'triangle');}}
-function hit(hard=false){
+function recoverySpot(){
+ const supports=objects.filter(o=>o.type==='roof'||o.type==='penthouse').map(o=>({x:o.mesh.position.x,z:o.mesh.position.z,halfWidth:1.2,halfLength:o.len/2,top:2.76})).concat(adventure.surfaces());
+ const blockers=objects.filter(o=>['barrier','overhead'].includes(o.type)).map(o=>({x:o.mesh.position.x,z:o.mesh.position.z,halfLength:o.len/2})).concat(adventure.recoveryHazards());
+ const lanes=terrain.lanes(terrain.indexAt(distance)),ahead=terrain.lanes(terrain.indexAt(distance+6));
+ return lanes.map(lane=>{const x=lane*2.8+terrain.offsetAt(distance),y=supports.filter(s=>Math.abs(x-s.x)<s.halfWidth&&Math.abs(s.z)<s.halfLength+.2).reduce((top,s)=>Math.max(top,s.top),0),blocked=blockers.some(b=>Math.abs(x-b.x)<1.6&&b.z>-8-b.halfLength&&b.z<2+b.halfLength);return {lane,x,y,blocked,score:(blocked?100:0)+(ahead.includes(lane)?0:20)+Math.abs(x-physics.x)};}).sort((a,b)=>a.score-b.score)[0];
+}
+function resumeAfterHit(){
+ // A crowded landing gets a short clear pocket, never a forced second hit.
+ if(recovery.blocked){for(let i=objects.length-1;i>=0;i--){const o=objects[i];if(['barrier','overhead'].includes(o.type)&&Math.abs(o.mesh.position.x-recovery.x)<1.6&&o.mesh.position.z>-8-o.len/2&&o.mesh.position.z<2+o.len/2){scene.remove(o.mesh);objects.splice(i,1);}}adventure.clearRecoveryPath(recovery.x);}
+ const moon=physics.moon,regen=physics.regen;physics.reset();physics.moon=moon;physics.regen=regen;physics.lane=recovery.lane;physics.x=recovery.x;physics.y=recovery.y;
+ avatar.reset();avatar.animate(0,physics,preHitSpeed,time);speed=Math.min(preHitSpeed,12+Math.min(distance/900,4));invincible=2.3;splatEnded=false;recovery=null;setMode('running');updateHud();toast('BACK ON YOUR PAWS · '+lives+' HEART'+(lives===1?'':'S')+' LEFT');
+}
+function hit(hard=false,fall=false){
  if(mode!=='running')return mode==='splat';
+ if(!fall&&(invincible>0||(!hard&&physics.phase>0)))return false;
+ if(!hard&&shield>0){shield=0;invincible=1.5;toast('SHIELD CLEARED THE SMOKE');return false;}
+ lives=Math.max(0,lives-1);combo=0;comboTimer=0;
  if(hard){
-  splatEnded=true;splatTime=0;splatFromY=physics.y;
+  recovery=lives>0?recoverySpot():null;splatEnded=lives===0;splatTime=0;splatFromX=physics.x;splatFromY=physics.y;preHitSpeed=speed;
   const supports=objects.filter(o=>o.type==='roof'||o.type==='penthouse').map(o=>({x:o.mesh.position.x,z:o.mesh.position.z,halfWidth:1.2,halfLength:o.len/2,top:2.76})).concat(adventure.surfaces());
   splatFloor=supports.filter(s=>s.top<=physics.y+.03&&Math.abs(physics.x-s.x)<s.halfWidth&&Math.abs(s.z)<s.halfLength).reduce((floor,s)=>Math.max(floor,s.top),0);
-  speed=0;physics.vx=0;physics.vy=0;physics.phase=0;physics.jumpBuffer=0;physics.jumpHeld=false;physics.secondary.reset();lives=0;combo=0;comboTimer=0;rush=0;shield=0;
-  setMode('splat');avatar.animateSplat(0,physics);updateHud();toast('BONK. CAT IS LIQUID.');tone(110,.14,.035,'triangle');return true;
+  speed=0;physics.vx=0;physics.vy=0;physics.phase=0;physics.jumpBuffer=0;physics.jumpHeld=false;physics.secondary.reset();rush=0;shield=0;
+  setMode('splat');avatar.animateSplat(0,physics);updateHud();toast(lives>0?'BONK! −1 HEART · GETTING BACK UP':'BONK. CAT IS LIQUID.');tone(110,.14,.035,'triangle');return true;
  }
- if(invincible>0||physics.phase>0)return false;
- if(shield>0){shield=0;invincible=1.5;toast('SHIELD CLEARED THE SMOKE');return false;}
- lives--;combo=0;comboTimer=0;invincible=2.3;tone(150,.14,.025,'triangle');toast('COUGH! FIND CLEAR AIR.');if(lives<=0)finish();return mode!=='running';
+ invincible=2.3;tone(150,.14,.025,'triangle');toast('COUGH! −1 HEART · FIND CLEAR AIR.');updateHud();if(lives===0)finish();return mode!=='running';
 }
 const penthouseMats=[mat('#27657f'),mat('#735286'),mat('#457c79')];mats.moon=mat('#cfb6ff',1.7);
 function createObject(type,l,z,height=0){const g=new THREE.Group();g.position.set(l*2.8+terrain.offsetAt(distance-z),height,z);let len=.8;
@@ -120,8 +134,9 @@ function createObject(type,l,z,height=0){const g=new THREE.Group();g.position.se
  scene.add(g);const obj={type,l,mesh:g,len,done:false,height,previousZ:z,close:false,cleared:false,failed:false};objects.push(obj);return obj;
 }
 const adventure=createAdventure({scene,camera,physics,route,box,ball,mesh,mats,mat,createObject,toast,hit,addStyle,tone,scheduleRoute:(start,side)=>{terrain.schedule(start,side);syncRoofs();},getState:()=>({distance,speed,time,styleScore,rush})});
-function updateHud(){$('score').textContent=Math.floor(distance);$('coins').textContent=coins;$('bestHud').textContent=`BEST ${best} m`;$('hearts').textContent='♥ '.repeat(Math.max(lives,0))+'♡ '.repeat(3-Math.max(lives,0));$('hearts').setAttribute('aria-label',`${lives} lives`);$('charge').style.width=nitro.fuel+'%';$('chargeLabel').textContent=Math.floor(nitro.fuel)+'%';$('nitroBtn').classList.toggle('active',nitro.active);$('nitroBtn').setAttribute('aria-pressed',String(nitro.held));$('nitroFuel').textContent=Math.floor(nitro.fuel)+'%';$('nitroMode').textContent=nitro.active?'ϟ SPEEDSTER':'ϟ NITRO';$('powerStatus').textContent=nitro.active?'SPEEDSTER · WORLD IN SLOW MOTION':shield>0?`SHIELD · ${Math.ceil(shield)}s`:magnet>0?`GOLD MAGNET · ${Math.ceil(magnet)}s`:'HOLD N / NITRO · GOLD REFILLS FUEL';$('rushFx').classList.toggle('active',rush>0);$('phaseFx').classList.toggle('active',physics.phase>0);$('district').textContent=`WAKE THE CITY · ${gates%3} / 3 GATES`;$('moonCount').textContent='● '.repeat(physics.moon)+'○ '.repeat(3-physics.moon);$('moonRegen').style.width=physics.moon===3?'100%':`${physics.regen/9*100}%`;$('styleScore').textContent=styleScore.toLocaleString();$('combo').textContent=combo?`×${combo} · ${comboTimer.toFixed(1)}s`:'FIND YOUR FLOW';$('combo').classList.toggle('hot',combo>1);$('pounceBtn').disabled=physics.moon<1||physics.airPounced;$('pounceLabel').textContent='POUNCE';$('pounceBtn').setAttribute('aria-label',`Moon pounce, ${physics.moon} charges`);}
+function updateHud(){$('score').textContent=Math.floor(distance);$('coins').textContent=coins;$('bestHud').textContent=`BEST ${best} m`;$('hearts').textContent='♥ '.repeat(Math.max(lives,0))+'♡ '.repeat(3-Math.max(lives,0));$('hearts').setAttribute('aria-label',`${lives} lives`);$('charge').style.width=nitro.fuel+'%';$('chargeLabel').textContent=Math.floor(nitro.fuel)+'%';$('nitroBtn').classList.toggle('active',nitro.active);$('nitroBtn').setAttribute('aria-pressed',String(nitro.held));$('nitroFuel').textContent=Math.floor(nitro.fuel)+'%';$('nitroMode').textContent=nitro.active?'ϟ SPEEDSTER':'ϟ NITRO';$('powerStatus').textContent=invincible>0?'RECOVERY GRACE · KEEP RUNNING':nitro.active?'SPEEDSTER · WORLD IN SLOW MOTION':shield>0?`SHIELD · ${Math.ceil(shield)}s`:magnet>0?`GOLD MAGNET · ${Math.ceil(magnet)}s`:'HOLD N / NITRO · GOLD REFILLS FUEL';$('rushFx').classList.toggle('active',rush>0);$('phaseFx').classList.toggle('active',physics.phase>0);$('district').textContent=`WAKE THE CITY · ${gates%3} / 3 GATES`;$('moonCount').textContent='● '.repeat(physics.moon)+'○ '.repeat(3-physics.moon);$('moonRegen').style.width=physics.moon===3?'100%':`${physics.regen/9*100}%`;$('styleScore').textContent=styleScore.toLocaleString();$('combo').textContent=combo?`×${combo} · ${comboTimer.toFixed(1)}s`:'FIND YOUR FLOW';$('combo').classList.toggle('hot',combo>1);$('pounceBtn').disabled=physics.moon<1||physics.airPounced;$('pounceLabel').textContent='POUNCE';$('pounceBtn').setAttribute('aria-label',`Moon pounce, ${physics.moon} charges`);}
 function update(dt){
+ if(mode==='splat'&&recovery){splatTime+=dt;const t=Math.min(1,splatTime/.65),u=THREE.MathUtils.smoothstep(t,.2,.9);physics.x=THREE.MathUtils.lerp(splatFromX,recovery.x,u);physics.y=THREE.MathUtils.lerp(splatFromY,recovery.y,u);avatar.animateSplat(Math.max(0,Math.min(splatTime,.65-splatTime))*(.32/.24),physics);shadow.position.set(physics.x,recovery.y+.035,0);if(splatTime>=.65)resumeAfterHit();return;}
  if(mode==='splat'){splatTime+=dt;const fall=Math.min(1,splatTime/.55);physics.y=splatFromY+(splatFloor-splatFromY)*(fall*fall*(3-2*fall));avatar.animateSplat(splatTime,physics);shadow.position.set(physics.x,splatFloor+.035,0);shadow.scale.set(1.65,1.6,1);if(splatTime>=1.15)finish();return;}
  if(mode!=='running'&&mode!=='menu')return;
  const realDt=dt;if(mode==='running'){nitro.step(realDt);speedster.step(realDt,nitro.active);}const worldDt=dt*speedster.worldScale;
@@ -134,7 +149,7 @@ function update(dt){
  for(const o of objects){o.previousZ=o.mesh.position.z;o.mesh.position.z+=step;}
  adventure.advance(worldDt,step);
  const surfaces=objects.filter(o=>o.type==='penthouse'||o.type==='roof').map(o=>({x:o.mesh.position.x,z:o.mesh.position.z,halfWidth:1.2,halfLength:o.len/2,top:2.76})).concat(adventure.surfaces());
- physics.step(dt,surfaces,terrain.supported(distance,physics.x),terrain.offsetAt(distance),realDt*speedster.steeringScale);if(physics.y < -3){lives=0;nitro.release();finish();$('endEyebrow').textContent='MIND THE GAP';$('endMessage').textContent='Choose a lit roof, or jump across the gap. Your next run starts here.';return;}adventure.collide(worldDt);if(mode!=='running')return;
+ physics.step(dt,surfaces,terrain.supported(distance,physics.x),terrain.offsetAt(distance),realDt*speedster.steeringScale);if(physics.y < -3){hit(true,true);return;}adventure.collide(worldDt);if(mode!=='running')return;
  if(physics.landed&&physics.impact>7){burst(new THREE.Vector3(physics.x,physics.y+.12,0),mats.white,5);tone(95,.06,.023,'triangle');}
  spawnClock-=dt;if(spawnClock<=0&&adventure.canSpawn()){for(let k=0;k<6;k++){const z=-38-k*2.2,lanes=terrain.lanes(terrain.indexAt(distance-z));createObject('coin',lanes.includes(0)?0:lanes[0],z);}spawnClock=2.8;}beat+=dt;if(beat>.26){beat=0;tone(notes[Math.floor(time/.26)%8],.13,.012,'triangle');}
  for(let i=objects.length-1;i>=0;i--){const o=objects[i],dz=o.mesh.position.z,dx=Math.abs(o.mesh.position.x-physics.x),overlap=sweptOverlap(o.previousZ,dz,o.len/2);
@@ -170,14 +185,14 @@ $('nitroBtn').addEventListener('pointerdown',e=>{e.preventDefault();$('nitroBtn'
 for(const event of ['pointerup','pointercancel','lostpointercapture'])$('nitroBtn').addEventListener(event,()=>nitro.release());
 $('nitroBtn').addEventListener('keydown',e=>{if(['Space','Enter'].includes(e.code)){e.preventDefault();e.stopPropagation();if(mode==='running')nitro.press();}});
 $('nitroBtn').addEventListener('keyup',e=>{if(['Space','Enter'].includes(e.code)){e.preventDefault();e.stopPropagation();nitro.release();}});
-addEventListener('blur',()=>{nitro.release();if(mode==='running')pause();});
-let helpPaused=false;$('helpBtn').onclick=()=>{helpPaused=mode==='running';if(helpPaused)pause();$('help').showModal();};function closeHelp(){$('help').close();if(helpPaused&&mode==='paused')pause();helpPaused=false;}$('closeHelp').onclick=closeHelp;$('gotIt').onclick=closeHelp;$('help').addEventListener('cancel',e=>{e.preventDefault();closeHelp();});
+addEventListener('blur',()=>{nitro.release();if(mode==='running'||(mode==='splat'&&recovery))pause();});
+let helpPaused=false;$('helpBtn').onclick=()=>{helpPaused=mode==='running'||(mode==='splat'&&!!recovery);if(helpPaused)pause();$('help').showModal();};function closeHelp(){$('help').close();if(helpPaused&&mode==='paused')pause();helpPaused=false;}$('closeHelp').onclick=closeHelp;$('gotIt').onclick=closeHelp;$('help').addEventListener('cancel',e=>{e.preventDefault();closeHelp();});
 $('soundBtn').onclick=()=>{sound=!sound;$('soundBtn').textContent=sound?'♫':'♪̸';$('soundBtn').setAttribute('aria-label',sound?'Mute sound':'Enable sound');if(sound){audioInit();tone();}};
 $('fullBtn').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await $('app').requestFullscreen();}catch{toast('FULLSCREEN UNAVAILABLE');}};
 addEventListener('keydown',e=>{if($('help').open||['leftBtn','rightBtn'].includes(e.target?.id))return;if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();if(e.repeat)return;if(e.code==='Space'&&['menu','over'].includes(mode)){start();return;}if(e.code==='KeyP'||e.code==='Escape'){pause();return;}if(mode!=='running')return;if(e.code==='KeyN'){nitro.press();return;}if(e.code==='ArrowLeft'||e.code==='KeyA')move(-1);if(e.code==='ArrowRight'||e.code==='KeyD')move(1);if(['ArrowUp','KeyW','Space'].includes(e.code))jump();if(['ArrowDown','KeyS'].includes(e.code))duck();if(['ShiftLeft','ShiftRight','KeyE'].includes(e.code))moonPounce();});
 addEventListener('keyup',e=>{if(e.code==='KeyN')nitro.release();if(mode!=='running')return;if(['ArrowUp','KeyW','Space'].includes(e.code))physics.releaseJump();});
 let touchX=0,touchY=0,activePointer=null;$('world').addEventListener('pointerdown',e=>{activePointer=e.pointerId;touchX=e.clientX;touchY=e.clientY;$('world').setPointerCapture(e.pointerId);});$('world').addEventListener('pointerup',e=>{if(activePointer!==e.pointerId)return;activePointer=null;const dx=e.clientX-touchX,dy=e.clientY-touchY;if(Math.max(Math.abs(dx),Math.abs(dy))<15){jump();return;}if(Math.abs(dx)>Math.abs(dy))move(dx>0?1:-1);else if(dy<0)jump();else duck();});$('world').addEventListener('pointercancel',()=>activePointer=null);
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&mode==='running')pause();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&(mode==='running'||(mode==='splat'&&recovery)))pause();});
 $('startBtn').disabled=true;$('startBtn').innerHTML='GETTING READY <span>☾</span>';
 avatar.loaded.then(()=>{$('startBtn').disabled=false;$('startBtn').innerHTML='LET’S RUN <span>↗</span>';}).catch(()=>{$('startBtn').disabled=true;$('startBtn').innerHTML='RELOAD TO RETRY';toast('MIDKNIGHT COULD NOT LOAD');});
 const art=$('mascotArt');art.onload=()=>{art.hidden=false;};art.src='assets/mascot.png';
